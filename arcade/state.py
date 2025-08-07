@@ -19,8 +19,15 @@ class State:
         pass
 
     def get_event(self, event):
-        """Handle a single event."""
-        pass
+        """Dispatch input events to specialized handlers."""
+        if event.type in (pygame.KEYDOWN, pygame.KEYUP):
+            self.handle_keyboard(event)
+        elif event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP, pygame.MOUSEMOTION):
+            self.handle_mouse(event)
+        elif event.type in (pygame.JOYAXISMOTION, pygame.JOYBALLMOTION,
+                             pygame.JOYHATMOTION, pygame.JOYBUTTONDOWN,
+                             pygame.JOYBUTTONUP):
+            self.handle_gamepad(event)
 
     def update(self, dt):
         """Update the state. *dt* is elapsed time in seconds."""
@@ -28,4 +35,16 @@ class State:
 
     def draw(self):
         """Draw everything to the screen."""
+        pass
+
+    def handle_keyboard(self, event):
+        """Handle keyboard events."""
+        pass
+
+    def handle_mouse(self, event):
+        """Handle mouse events."""
+        pass
+
+    def handle_gamepad(self, event):
+        """Handle gamepad events."""
         pass

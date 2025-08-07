@@ -1,12 +1,19 @@
 import os
-import sys
 import importlib
 import pygame
 
 from arcade_menu import MainMenuState
+from settings_state import SettingsState
 from state import State
+from utils.persistence import load_json, save_json
 
-WINDOW_SIZE = (800, 600)
+SETTINGS_PATH = os.path.join(os.path.dirname(__file__), "settings.json")
+DEFAULT_SETTINGS = {
+    "window_size": [800, 600],
+    "fullscreen": False,
+    "sound_volume": 1.0,
+    "keybindings": {}
+}
 
 
 def load_games():
@@ -34,18 +41,26 @@ def load_games():
 
 def main():
     pygame.init()
-    screen = pygame.display.set_mode(WINDOW_SIZE)
+    settings = load_json(SETTINGS_PATH, DEFAULT_SETTINGS)
+    base_size = tuple(settings.get("window_size", [800, 600]))
+    game_surface = pygame.Surface(base_size)
+    if settings.get("fullscreen"):
+        display = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+    else:
+        display = pygame.display.set_mode(base_size)
     pygame.display.set_caption("Arcade")
+    pygame.mixer.music.set_volume(settings.get("sound_volume", 1.0))
     clock = pygame.time.Clock()
 
     states = load_games()
     menu = MainMenuState()
+    settings_state = SettingsState()
     states["menu"] = menu
+    states["Settings"] = settings_state
 
     current_state = states["menu"]
-    current_state.startup(screen)
+    current_state.startup(game_surface)
 
-    fullscreen = False
     running = True
     while running:
         dt = clock.tick(60) / 1000.0
@@ -53,18 +68,19 @@ def main():
             if event.type == pygame.QUIT:
                 running = False
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_F11:
-                fullscreen = not fullscreen
-                if fullscreen:
-                    screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+                settings["fullscreen"] = not settings.get("fullscreen", False)
+                if settings["fullscreen"]:
+                    display = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
                 else:
-                    screen = pygame.display.set_mode(WINDOW_SIZE)
-                for state in states.values():
-                    state.screen = screen
+                    display = pygame.display.set_mode(base_size)
+                save_json(SETTINGS_PATH, settings)
             else:
                 current_state.get_event(event)
 
         current_state.update(dt)
         current_state.draw()
+        scaled = pygame.transform.scale(game_surface, display.get_size())
+        display.blit(scaled, (0, 0))
         pygame.display.flip()
 
         if current_state.quit:
@@ -72,8 +88,15 @@ def main():
         elif current_state.done:
             next_state = states.get(current_state.next)
             current_state.cleanup()
+            if isinstance(current_state, SettingsState):
+                settings = load_json(SETTINGS_PATH, DEFAULT_SETTINGS)
+                pygame.mixer.music.set_volume(settings.get("sound_volume", 1.0))
+                if settings.get("fullscreen"):
+                    display = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+                else:
+                    display = pygame.display.set_mode(base_size)
             if next_state:
-                next_state.startup(screen)
+                next_state.startup(game_surface)
                 current_state = next_state
 
     pygame.quit()

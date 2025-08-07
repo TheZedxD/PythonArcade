@@ -6,7 +6,7 @@ class PlaceholderGameState(State):
         super().startup(screen)
         self.font = pygame.font.SysFont("Courier", 36)
 
-    def get_event(self, event):
+    def handle_keyboard(self, event):
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
             self.done = True
             self.next = "menu"
