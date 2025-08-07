@@ -10,6 +10,8 @@ elif command -v pacman >/dev/null 2>&1; then
 elif command -v dnf >/dev/null 2>&1; then
     sudo dnf install -y python3 python3-devel python3-virtualenv \
         SDL2-devel SDL2_image-devel SDL2_mixer-devel SDL2_ttf-devel
+elif command -v brew >/dev/null 2>&1; then
+    brew install python@3 sdl2 sdl2_image sdl2_mixer sdl2_ttf
 fi
 
 python3 -m venv venv
