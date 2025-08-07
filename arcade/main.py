@@ -1,5 +1,6 @@
 import os
 import sys
+import importlib
 import pygame
 
 from arcade_menu import MainMenuState
@@ -20,9 +21,12 @@ def load_games():
         if os.path.isdir(path) and os.path.isfile(module_file):
             module_name = f"games.{name}.game"
             try:
-                module = __import__(module_name, fromlist=["PlaceholderGameState"])
-                state = module.PlaceholderGameState()
-                games[name] = state
+                module = importlib.import_module(module_name)
+                for attr in dir(module):
+                    obj = getattr(module, attr)
+                    if isinstance(obj, type) and issubclass(obj, State) and obj is not State:
+                        games[name] = obj()
+                        break
             except Exception:
                 continue
     return games
