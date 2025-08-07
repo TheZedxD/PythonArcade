@@ -1,4 +1,7 @@
 import os
+import random
+import string
+import math
 import pygame
 from state import State
 
@@ -8,18 +11,34 @@ class MainMenuState(State):
         self.options = []
         self.index = 0
         self.font = None
+        self.title_font = None
+        self.rain_font = None
         self.normal_color = (0, 155, 0)
         self.highlight_color = (0, 255, 0)
         self.bg_color = (0, 0, 0)
+        self.rain_glyphs = []
+        self.rain_chars = string.ascii_letters + string.digits
 
     def startup(self, screen):
         super().startup(screen)
         self.font = pygame.font.SysFont("Courier", 32)
+        self.title_font = pygame.font.SysFont("Courier", 48, bold=True)
+        self.rain_font = pygame.font.SysFont("Courier", 20)
         base_dir = os.path.join(os.path.dirname(__file__), "games")
         self.options = [name for name in sorted(os.listdir(base_dir))
-                        if os.path.isdir(os.path.join(base_dir, name))]
+                        if os.path.isdir(os.path.join(base_dir, name)) and
+                        os.path.isfile(os.path.join(base_dir, name, "game.py"))]
         self.options.append("Quit")
         self.index = 0
+
+        width, height = self.screen.get_size()
+        self.rain_glyphs = []
+        for _ in range(100):
+            x = random.randrange(0, width)
+            y = random.randrange(-height, 0)
+            speed = random.uniform(50, 150)
+            char = random.choice(self.rain_chars)
+            self.rain_glyphs.append([x, y, speed, char])
 
     def get_event(self, event):
         if event.type == pygame.KEYDOWN:
@@ -38,16 +57,35 @@ class MainMenuState(State):
                     self.done = True
 
     def update(self, dt):
-        pass
+        width, height = self.screen.get_size()
+        for g in self.rain_glyphs:
+            g[1] += g[2] * dt
+            if g[1] > height:
+                g[0] = random.randrange(0, width)
+                g[1] = random.randrange(-height, 0)
+                g[2] = random.uniform(50, 150)
+                g[3] = random.choice(self.rain_chars)
 
     def draw(self):
         self.screen.fill(self.bg_color)
         width, height = self.screen.get_size()
+
+        for x, y, _, char in self.rain_glyphs:
+            glyph = self.rain_font.render(char, True, self.normal_color)
+            self.screen.blit(glyph, (x, y))
+
+        t = pygame.time.get_ticks() / 300.0
+        glow = int(55 * (math.sin(t) + 1) / 2)
+        title_color = (self.highlight_color[0],
+                       min(255, self.highlight_color[1] + glow),
+                       self.highlight_color[2])
+        title = self.title_font.render("ARCADE TERMINAL", True, title_color)
+        title_rect = title.get_rect(center=(width // 2, height // 5))
+        self.screen.blit(title, title_rect)
+
         for i, option in enumerate(self.options):
             color = self.highlight_color if i == self.index else self.normal_color
-            text = self.font.render(option, True, color)
+            prefix = "> " if i == self.index else "  "
+            text = self.font.render(prefix + option, True, color)
             rect = text.get_rect(center=(width // 2, height // 3 + i * 40))
-            if i == self.index:
-                highlight_rect = rect.inflate(20, 10)
-                pygame.draw.rect(self.screen, self.highlight_color, highlight_rect, 2)
             self.screen.blit(text, rect)
