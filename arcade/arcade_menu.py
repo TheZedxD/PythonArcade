@@ -28,6 +28,7 @@ class MainMenuState(State):
         self.options = [name for name in sorted(os.listdir(base_dir))
                         if os.path.isdir(os.path.join(base_dir, name)) and
                         os.path.isfile(os.path.join(base_dir, name, "game.py"))]
+        self.options.append("Settings")
         self.options.append("Quit")
         self.index = 0
 
@@ -40,7 +41,7 @@ class MainMenuState(State):
             char = random.choice(self.rain_chars)
             self.rain_glyphs.append([x, y, speed, char])
 
-    def get_event(self, event):
+    def handle_keyboard(self, event):
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
                 self.quit = True

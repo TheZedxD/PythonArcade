@@ -1,7 +1,9 @@
 import os
 import random
+from datetime import datetime
 import pygame
 from state import State
+from utils.persistence import load_json, save_json
 
 class CollectDotsState(State):
     def startup(self, screen):
@@ -17,12 +19,10 @@ class CollectDotsState(State):
         self.state = "instructions"
         self.pause_options = ["Resume", "Quit to Menu"]
         self.pause_index = 0
-        self.hs_path = os.path.join(os.path.dirname(__file__), "highscore.txt")
-        if not os.path.isfile(self.hs_path):
-            with open(self.hs_path, "w") as f:
-                f.write("0")
-        with open(self.hs_path) as f:
-            self.high_score = int(f.read().strip() or 0)
+        self.hs_path = os.path.join(os.path.dirname(__file__), "highscores.json")
+        self.data = load_json(self.hs_path,
+                              {"highscore": 0, "plays": 0, "last_played": None})
+        self.high_score = self.data.get("highscore", 0)
 
     def respawn_dot(self):
         width, height = self.screen.get_size()
@@ -30,7 +30,7 @@ class CollectDotsState(State):
         y = random.randint(0, height - self.dot.height)
         self.dot.topleft = (x, y)
 
-    def get_event(self, event):
+    def handle_keyboard(self, event):
         if self.state == "instructions":
             if event.type == pygame.KEYDOWN:
                 self.state = "play"
@@ -49,15 +49,17 @@ class CollectDotsState(State):
                     if choice == "Resume":
                         self.state = "play"
                     elif choice == "Quit to Menu":
-                        self.update_highscore()
+                        self.update_stats()
                         self.done = True
                         self.next = "menu"
 
-    def update_highscore(self):
+    def update_stats(self):
         if self.score > self.high_score:
             self.high_score = self.score
-            with open(self.hs_path, "w") as f:
-                f.write(str(self.high_score))
+        self.data["highscore"] = self.high_score
+        self.data["plays"] = self.data.get("plays", 0) + 1
+        self.data["last_played"] = datetime.now().isoformat()
+        save_json(self.hs_path, self.data)
 
     def update(self, dt):
         if self.state != "play":
