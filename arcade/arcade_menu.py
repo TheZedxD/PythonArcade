@@ -25,11 +25,18 @@ class MainMenuState(State):
         self.title_font = pygame.font.SysFont("Courier", 48, bold=True)
         self.rain_font = pygame.font.SysFont("Courier", 20)
         base_dir = os.path.join(os.path.dirname(__file__), "games")
-        self.options = [name for name in sorted(os.listdir(base_dir))
-                        if os.path.isdir(os.path.join(base_dir, name)) and
-                        os.path.isfile(os.path.join(base_dir, name, "game.py"))]
-        self.options.append("Settings")
-        self.options.append("Quit")
+        self.options = []
+        for name in sorted(os.listdir(base_dir)):
+            path = os.path.join(base_dir, name)
+            module_file = os.path.join(path, "game.py")
+            if os.path.isdir(path) and os.path.isfile(module_file):
+                display = name
+                if display.startswith("game_"):
+                    display = display[5:]
+                display = display.replace("_", " ").upper()
+                self.options.append((name, display))
+        self.options.append(("Settings", "SETTINGS"))
+        self.options.append(("Quit", "QUIT"))
         self.index = 0
 
         width, height = self.screen.get_size()
@@ -50,7 +57,7 @@ class MainMenuState(State):
             elif event.key in (pygame.K_UP, pygame.K_w):
                 self.index = (self.index - 1) % len(self.options)
             elif event.key == pygame.K_RETURN:
-                choice = self.options[self.index]
+                choice = self.options[self.index][0]
                 if choice == "Quit":
                     self.quit = True
                 else:
@@ -84,9 +91,9 @@ class MainMenuState(State):
         title_rect = title.get_rect(center=(width // 2, height // 5))
         self.screen.blit(title, title_rect)
 
-        for i, option in enumerate(self.options):
+        for i, (_, label) in enumerate(self.options):
             color = self.highlight_color if i == self.index else self.normal_color
             prefix = "> " if i == self.index else "  "
-            text = self.font.render(prefix + option, True, color)
+            text = self.font.render(prefix + label, True, color)
             rect = text.get_rect(center=(width // 2, height // 3 + i * 40))
             self.screen.blit(text, rect)

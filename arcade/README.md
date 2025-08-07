@@ -30,6 +30,12 @@ Press `F11` to toggle fullscreen. The **Settings** menu accessed from the main
 menu lets you switch window mode and adjust master volume. Changes persist to
 `settings.json`.
 
+## Included games
+
+* **Collect Dots** – move the square to grab randomly spawning dots.
+* **TETROID** – a Matrix-themed Tetris clone with falling code backdrop and
+  persistent high score tracking.
+
 ## Adding games
 
 Create a new folder under `games/` with a `game.py` defining a state
