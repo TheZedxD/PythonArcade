@@ -6,13 +6,19 @@ from state import State
 from utils.persistence import load_json, save_json
 
 class CollectDotsState(State):
-    def startup(self, screen):
-        super().startup(screen)
+    def startup(self, screen, num_players: int = 1):
+        super().startup(screen, num_players)
         self.font = pygame.font.SysFont("Courier", 24)
         self.big_font = pygame.font.SysFont("Courier", 32)
         self.score = 0
-        self.player = pygame.Rect(screen.get_width() // 2 - 16,
-                                   screen.get_height() // 2 - 16, 32, 32)
+        self.score2 = 0
+        cx, cy = screen.get_width() // 2, screen.get_height() // 2
+        if self.num_players == 2:
+            self.player = pygame.Rect(cx - 32, cy - 16, 32, 32)
+            self.player2 = pygame.Rect(cx, cy - 16, 32, 32)
+        else:
+            self.player = pygame.Rect(cx - 16, cy - 16, 32, 32)
+            self.player2 = None
         self.dot = pygame.Rect(0, 0, 16, 16)
         self.respawn_dot()
         self.speed = 200
@@ -100,8 +106,11 @@ class CollectDotsState(State):
                     self.state = "play"
 
     def update_stats(self):
-        if self.score > self.high_score:
-            self.high_score = self.score
+        best = self.score
+        if self.num_players == 2:
+            best = max(self.score, self.score2)
+        if best > self.high_score:
+            self.high_score = best
         self.data["highscore"] = self.high_score
         self.data["plays"] = self.data.get("plays", 0) + 1
         self.data["last_played"] = datetime.now().isoformat()
@@ -111,30 +120,64 @@ class CollectDotsState(State):
         if self.state != "play":
             return
         keys = pygame.key.get_pressed()
-        dx = dy = 0
-        if keys[pygame.K_LEFT] or keys[pygame.K_a]:
-            dx -= 1
-        if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
-            dx += 1
-        if keys[pygame.K_UP] or keys[pygame.K_w]:
-            dy -= 1
-        if keys[pygame.K_DOWN] or keys[pygame.K_s]:
-            dy += 1
-        pad_dx = pad_dy = 0
-        for px, py in self.pad_dirs.values():
-            pad_dx += px
-            pad_dy += py
-        self.player.x += (dx + pad_dx) * self.speed * dt
-        self.player.y += (dy + pad_dy) * self.speed * dt
-        self.player.clamp_ip(self.screen.get_rect())
-        if self.player.colliderect(self.dot):
-            self.score += 1
-            self.respawn_dot()
+        if self.num_players == 2:
+            dx1 = dy1 = dx2 = dy2 = 0
+            if keys[pygame.K_LEFT]:
+                dx1 -= 1
+            if keys[pygame.K_RIGHT]:
+                dx1 += 1
+            if keys[pygame.K_UP]:
+                dy1 -= 1
+            if keys[pygame.K_DOWN]:
+                dy1 += 1
+            if keys[pygame.K_a]:
+                dx2 -= 1
+            if keys[pygame.K_d]:
+                dx2 += 1
+            if keys[pygame.K_w]:
+                dy2 -= 1
+            if keys[pygame.K_s]:
+                dy2 += 1
+            self.player.x += dx1 * self.speed * dt
+            self.player.y += dy1 * self.speed * dt
+            self.player.clamp_ip(self.screen.get_rect())
+            self.player2.x += dx2 * self.speed * dt
+            self.player2.y += dy2 * self.speed * dt
+            self.player2.clamp_ip(self.screen.get_rect())
+            if self.player.colliderect(self.dot):
+                self.score += 1
+                self.respawn_dot()
+            elif self.player2.colliderect(self.dot):
+                self.score2 += 1
+                self.respawn_dot()
+        else:
+            dx = dy = 0
+            if keys[pygame.K_LEFT] or keys[pygame.K_a]:
+                dx -= 1
+            if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
+                dx += 1
+            if keys[pygame.K_UP] or keys[pygame.K_w]:
+                dy -= 1
+            if keys[pygame.K_DOWN] or keys[pygame.K_s]:
+                dy += 1
+            pad_dx = pad_dy = 0
+            for px, py in self.pad_dirs.values():
+                pad_dx += px
+                pad_dy += py
+            self.player.x += (dx + pad_dx) * self.speed * dt
+            self.player.y += (dy + pad_dy) * self.speed * dt
+            self.player.clamp_ip(self.screen.get_rect())
+            if self.player.colliderect(self.dot):
+                self.score += 1
+                self.respawn_dot()
 
     def draw(self):
         self.screen.fill((0, 0, 0))
         if self.state == "instructions":
-            text1 = self.big_font.render("Use arrow keys to move the square", True, (0, 255, 0))
+            if self.num_players == 2:
+                text1 = self.big_font.render("P1: Arrows  P2: WASD", True, (0, 255, 0))
+            else:
+                text1 = self.big_font.render("Use arrow keys to move the square", True, (0, 255, 0))
             text2 = self.big_font.render("Press any key to start", True, (0, 255, 0))
             rect1 = text1.get_rect(center=(self.screen.get_width() // 2, self.screen.get_height() // 2 - 20))
             rect2 = text2.get_rect(center=(self.screen.get_width() // 2, self.screen.get_height() // 2 + 20))
@@ -143,9 +186,18 @@ class CollectDotsState(State):
             return
 
         pygame.draw.rect(self.screen, (0, 255, 0), self.player)
+        if self.num_players == 2 and self.player2:
+            pygame.draw.rect(self.screen, (0, 0, 255), self.player2)
         pygame.draw.ellipse(self.screen, (255, 0, 0), self.dot)
-        score_text = self.font.render(f"Score: {self.score}", True, (0, 255, 0))
-        self.screen.blit(score_text, (10, 10))
+        if self.num_players == 2:
+            score1 = self.font.render(f"P1: {self.score}", True, (0, 255, 0))
+            score2 = self.font.render(f"P2: {self.score2}", True, (0, 255, 0))
+            self.screen.blit(score1, (10, 10))
+            rect2 = score2.get_rect(topright=(self.screen.get_width() - 10, 10))
+            self.screen.blit(score2, rect2)
+        else:
+            score_text = self.font.render(f"Score: {self.score}", True, (0, 255, 0))
+            self.screen.blit(score_text, (10, 10))
 
         if self.state == "pause":
             overlay = pygame.Surface(self.screen.get_size(), pygame.SRCALPHA)

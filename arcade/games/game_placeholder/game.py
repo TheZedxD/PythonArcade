@@ -2,8 +2,8 @@ import pygame
 from state import State
 
 class PlaceholderGameState(State):
-    def startup(self, screen):
-        super().startup(screen)
+    def startup(self, screen, num_players: int = 1):
+        super().startup(screen, num_players)
         self.font = pygame.font.SysFont("Courier", 36)
 
     def handle_keyboard(self, event):

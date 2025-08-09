@@ -101,7 +101,7 @@ def main():
                 for state in states.values():
                     state.screen = screen
             if next_state:
-                next_state.startup(screen)
+                next_state.startup(screen, current_state.num_players)
                 current_state = next_state
 
     pygame.quit()

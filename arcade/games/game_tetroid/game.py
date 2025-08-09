@@ -59,8 +59,8 @@ SCORES = {1: 40, 2: 100, 3: 300, 4: 1200}
 class TetroidState(State):
     """Matrix-themed Tetris clone."""
 
-    def startup(self, screen):
-        super().startup(screen)
+    def startup(self, screen, num_players: int = 1):
+        super().startup(screen, num_players)
         self.font = pygame.font.SysFont("Courier", 24)
         self.big_font = pygame.font.SysFont("Courier", 32)
         self.rain_font = pygame.font.SysFont("Courier", 20)
