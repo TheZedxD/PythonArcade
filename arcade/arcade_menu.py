@@ -6,6 +6,7 @@ import math
 import pygame
 from state import State
 
+
 class MainMenuState(State):
     def __init__(self):
         super().__init__()
@@ -197,9 +198,11 @@ class MainMenuState(State):
 
         t = pygame.time.get_ticks() / 300.0
         glow = int(55 * (math.sin(t) + 1) / 2)
-        title_color = (self.highlight_color[0],
-                       min(255, self.highlight_color[1] + glow),
-                       self.highlight_color[2])
+        title_color = (
+            self.highlight_color[0],
+            min(255, self.highlight_color[1] + glow),
+            self.highlight_color[2],
+        )
         title = self.title_font.render("ARCADE TERMINAL", True, title_color)
         title_rect = title.get_rect(center=(width // 2, height // 5))
         self.screen.blit(title, title_rect)

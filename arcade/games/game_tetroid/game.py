@@ -66,8 +66,7 @@ class TetroidState(State):
         self.rain_font = pygame.font.SysFont("Courier", 20)
         self.rain_chars = string.ascii_letters + string.digits
         self.rain_surfaces = {
-            ch: self.rain_font.render(ch, True, (0, 155, 0))
-            for ch in self.rain_chars
+            ch: self.rain_font.render(ch, True, (0, 155, 0)) for ch in self.rain_chars
         }
         self.normal_color = (0, 155, 0)
         self.highlight_color = (0, 255, 0)
@@ -88,14 +87,19 @@ class TetroidState(State):
         self.state = "instructions"
         self.pause_options = ["Resume", "Volume -", "Volume +", "Fullscreen", "Quit"]
         self.pause_index = 0
-        self.settings = load_json(SETTINGS_PATH, {
-            "window_size": [800, 600],
-            "fullscreen": False,
-            "sound_volume": 1.0,
-            "keybindings": {},
-        })
+        self.settings = load_json(
+            SETTINGS_PATH,
+            {
+                "window_size": [800, 600],
+                "fullscreen": False,
+                "sound_volume": 1.0,
+                "keybindings": {},
+            },
+        )
         pygame.mixer.music.set_volume(self.settings.get("sound_volume", 1.0))
-        self.hs_data = load_json(HS_PATH, {"highscore": 0, "plays": 0, "last_played": None})
+        self.hs_data = load_json(
+            HS_PATH, {"highscore": 0, "plays": 0, "last_played": None}
+        )
         self.high_score = self.hs_data.get("highscore", 0)
         width, height = self.screen.get_size()
         max_glyphs = 80 if width >= 800 else 40
@@ -116,7 +120,7 @@ class TetroidState(State):
     def random_piece(self):
         shape = random.choice(list(TETROMINOES.keys()))
         return {"shape": shape, "rot": 0, "x": GRID_WIDTH // 2 - 2, "y": 0}
-        
+
     def _create_board(self, playfield_x):
         board = {
             "playfield_x": playfield_x,
@@ -141,7 +145,9 @@ class TetroidState(State):
         board["next_piece"] = self.random_piece()
         if self.collides(board, board["current"], 0, 0):
             board["gameover"] = True
-            if self.num_players == 1 or (self.board1["gameover"] and (not self.board2 or self.board2["gameover"])):
+            if self.num_players == 1 or (
+                self.board1["gameover"] and (not self.board2 or self.board2["gameover"])
+            ):
                 self.state = "gameover"
                 self.update_stats()
 
@@ -204,29 +210,49 @@ class TetroidState(State):
                     self.pause_index = 0
                 # Player 1 controls
                 if not self.board1["gameover"]:
-                    if event.key == pygame.K_LEFT and not self.collides(self.board1, self.board1["current"], -1, 0):
+                    if event.key == pygame.K_LEFT and not self.collides(
+                        self.board1, self.board1["current"], -1, 0
+                    ):
                         self.board1["current"]["x"] -= 1
-                    elif event.key == pygame.K_RIGHT and not self.collides(self.board1, self.board1["current"], 1, 0):
+                    elif event.key == pygame.K_RIGHT and not self.collides(
+                        self.board1, self.board1["current"], 1, 0
+                    ):
                         self.board1["current"]["x"] += 1
-                    elif event.key == pygame.K_DOWN and not self.collides(self.board1, self.board1["current"], 0, 1):
+                    elif event.key == pygame.K_DOWN and not self.collides(
+                        self.board1, self.board1["current"], 0, 1
+                    ):
                         self.board1["current"]["y"] += 1
                     elif event.key == pygame.K_UP:
                         self.rotate(self.board1)
                     elif event.key == pygame.K_SPACE:
-                        while not self.collides(self.board1, self.board1["current"], 0, 1):
+                        while not self.collides(
+                            self.board1, self.board1["current"], 0, 1
+                        ):
                             self.board1["current"]["y"] += 1
                 # Player 2 controls
-                if self.num_players == 2 and self.board2 and not self.board2["gameover"]:
-                    if event.key == pygame.K_a and not self.collides(self.board2, self.board2["current"], -1, 0):
+                if (
+                    self.num_players == 2
+                    and self.board2
+                    and not self.board2["gameover"]
+                ):
+                    if event.key == pygame.K_a and not self.collides(
+                        self.board2, self.board2["current"], -1, 0
+                    ):
                         self.board2["current"]["x"] -= 1
-                    elif event.key == pygame.K_d and not self.collides(self.board2, self.board2["current"], 1, 0):
+                    elif event.key == pygame.K_d and not self.collides(
+                        self.board2, self.board2["current"], 1, 0
+                    ):
                         self.board2["current"]["x"] += 1
-                    elif event.key == pygame.K_s and not self.collides(self.board2, self.board2["current"], 0, 1):
+                    elif event.key == pygame.K_s and not self.collides(
+                        self.board2, self.board2["current"], 0, 1
+                    ):
                         self.board2["current"]["y"] += 1
                     elif event.key == pygame.K_w:
                         self.rotate(self.board2)
                     elif event.key == pygame.K_f:
-                        while not self.collides(self.board2, self.board2["current"], 0, 1):
+                        while not self.collides(
+                            self.board2, self.board2["current"], 0, 1
+                        ):
                             self.board2["current"]["y"] += 1
         elif self.state == "pause":
             if event.type == pygame.KEYDOWN:
@@ -244,7 +270,9 @@ class TetroidState(State):
                         self.next = "menu"
                     elif choice == "Fullscreen":
                         pygame.display.toggle_fullscreen()
-                        self.settings["fullscreen"] = not self.settings.get("fullscreen", False)
+                        self.settings["fullscreen"] = not self.settings.get(
+                            "fullscreen", False
+                        )
                         save_json(SETTINGS_PATH, self.settings)
                     elif choice == "Volume +":
                         vol = min(1.0, self.settings.get("sound_volume", 1.0) + 0.1)
@@ -279,20 +307,32 @@ class TetroidState(State):
                     self.pause_index = 0
             elif event.type == pygame.JOYAXISMOTION:
                 if event.axis == 0:
-                    if event.value < -0.5 and not self.collides(self.board1, self.board1["current"], -1, 0):
+                    if event.value < -0.5 and not self.collides(
+                        self.board1, self.board1["current"], -1, 0
+                    ):
                         self.board1["current"]["x"] -= 1
-                    elif event.value > 0.5 and not self.collides(self.board1, self.board1["current"], 1, 0):
+                    elif event.value > 0.5 and not self.collides(
+                        self.board1, self.board1["current"], 1, 0
+                    ):
                         self.board1["current"]["x"] += 1
                 elif event.axis == 1:
-                    if event.value > 0.5 and not self.collides(self.board1, self.board1["current"], 0, 1):
+                    if event.value > 0.5 and not self.collides(
+                        self.board1, self.board1["current"], 0, 1
+                    ):
                         self.board1["current"]["y"] += 1
             elif event.type == pygame.JOYHATMOTION:
                 x, y = event.value
-                if x == -1 and not self.collides(self.board1, self.board1["current"], -1, 0):
+                if x == -1 and not self.collides(
+                    self.board1, self.board1["current"], -1, 0
+                ):
                     self.board1["current"]["x"] -= 1
-                elif x == 1 and not self.collides(self.board1, self.board1["current"], 1, 0):
+                elif x == 1 and not self.collides(
+                    self.board1, self.board1["current"], 1, 0
+                ):
                     self.board1["current"]["x"] += 1
-                if y == -1 and not self.collides(self.board1, self.board1["current"], 0, 1):
+                if y == -1 and not self.collides(
+                    self.board1, self.board1["current"], 0, 1
+                ):
                     self.board1["current"]["y"] += 1
                 elif y == 1:
                     self.rotate(self.board1)
@@ -320,7 +360,9 @@ class TetroidState(State):
                         self.next = "menu"
                     elif choice == "Fullscreen":
                         pygame.display.toggle_fullscreen()
-                        self.settings["fullscreen"] = not self.settings.get("fullscreen", False)
+                        self.settings["fullscreen"] = not self.settings.get(
+                            "fullscreen", False
+                        )
                         save_json(SETTINGS_PATH, self.settings)
                     elif choice == "Volume +":
                         vol = min(1.0, self.settings.get("sound_volume", 1.0) + 0.1)
@@ -386,9 +428,12 @@ class TetroidState(State):
 
     # Drawing ----------------------------------------------------------
     def draw_cell(self, board, x, y, color):
-        rect = pygame.Rect(board["playfield_x"] + x * self.cell,
-                           board["playfield_y"] + y * self.cell,
-                           self.cell, self.cell)
+        rect = pygame.Rect(
+            board["playfield_x"] + x * self.cell,
+            board["playfield_y"] + y * self.cell,
+            self.cell,
+            self.cell,
+        )
         pygame.draw.rect(self.screen, color, rect)
         pygame.draw.rect(self.screen, self.normal_color, rect, 1)
 
@@ -407,9 +452,12 @@ class TetroidState(State):
         if self.board2:
             boards.append(self.board2)
         for idx, board in enumerate(boards):
-            pf_rect = pygame.Rect(board["playfield_x"] - 4, board["playfield_y"] - 4,
-                                  GRID_WIDTH * self.cell + 8,
-                                  GRID_HEIGHT * self.cell + 8)
+            pf_rect = pygame.Rect(
+                board["playfield_x"] - 4,
+                board["playfield_y"] - 4,
+                GRID_WIDTH * self.cell + 8,
+                GRID_HEIGHT * self.cell + 8,
+            )
             pygame.draw.rect(self.screen, self.normal_color, pf_rect, 2)
 
             for y in range(GRID_HEIGHT):
@@ -431,17 +479,25 @@ class TetroidState(State):
                 pygame.draw.rect(self.screen, self.highlight_color, rect)
                 pygame.draw.rect(self.screen, self.normal_color, rect, 1)
 
-            label = f"P{idx + 1}: {board['score']}" if self.board2 else f"Score: {board['score']}"
+            label = (
+                f"P{idx + 1}: {board['score']}"
+                if self.board2
+                else f"Score: {board['score']}"
+            )
             score_text = self.font.render(label, True, self.highlight_color)
             self.screen.blit(score_text, (preview_x, preview_y + 120))
             if idx == 0:
-                hs_text = self.font.render(f"High: {self.high_score}", True, self.highlight_color)
+                hs_text = self.font.render(
+                    f"High: {self.high_score}", True, self.highlight_color
+                )
                 self.screen.blit(hs_text, (preview_x, preview_y + 150))
 
         if self.state == "instructions":
             text1 = self.big_font.render("TETROID", True, self.highlight_color)
             if self.board2:
-                text2 = self.font.render("P1: Arrows  P2: WASD", True, self.highlight_color)
+                text2 = self.font.render(
+                    "P1: Arrows  P2: WASD", True, self.highlight_color
+                )
                 text3 = self.font.render("Press any key", True, self.highlight_color)
                 rect1 = text1.get_rect(center=(width // 2, height // 3))
                 rect2 = text2.get_rect(center=(width // 2, height // 2))
@@ -459,7 +515,9 @@ class TetroidState(State):
             self.overlay.fill((0, 0, 0, 200))
             self.screen.blit(self.overlay, (0, 0))
             for i, option in enumerate(self.pause_options):
-                color = self.highlight_color if i == self.pause_index else self.normal_color
+                color = (
+                    self.highlight_color if i == self.pause_index else self.normal_color
+                )
                 prefix = "> " if i == self.pause_index else "  "
                 text = self.big_font.render(prefix + option, True, color)
                 rect = text.get_rect(center=(width // 2, height // 3 + i * 40))

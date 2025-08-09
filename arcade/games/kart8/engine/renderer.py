@@ -69,14 +69,22 @@ class Renderer:
             shoulder_color = (200, 200, 200) if color_index % 2 else (220, 220, 220)
             grass_color = (16, 120, 16) if color_index % 2 else (0, 170, 0)
             pygame.draw.rect(self.screen, grass_color, pygame.Rect(0, y, left, 1))
-            pygame.draw.rect(self.screen, grass_color, pygame.Rect(right, y, width - right, 1))
+            pygame.draw.rect(
+                self.screen, grass_color, pygame.Rect(right, y, width - right, 1)
+            )
             pygame.draw.rect(self.screen, shoulder_color, pygame.Rect(left, y, 2, 1))
-            pygame.draw.rect(self.screen, shoulder_color, pygame.Rect(right - 2, y, 2, 1))
-            pygame.draw.rect(self.screen, road_color, pygame.Rect(left + 2, y, right - left - 4, 1))
+            pygame.draw.rect(
+                self.screen, shoulder_color, pygame.Rect(right - 2, y, 2, 1)
+            )
+            pygame.draw.rect(
+                self.screen, road_color, pygame.Rect(left + 2, y, right - left - 4, 1)
+            )
 
     def render_billboards(self, player):
-        for z, x, color in sorted(self.track.billboards,
-                                  key=lambda b: -self.track.relative_distance(player.z, b[0])):
+        for z, x, color in sorted(
+            self.track.billboards,
+            key=lambda b: -self.track.relative_distance(player.z, b[0]),
+        ):
             res = self.project(z, x, player)
             if not res:
                 continue
@@ -128,7 +136,9 @@ class Renderer:
                 self.screen.blit(img, rect)
             else:
                 rect = pygame.Rect(int(sx) - size // 2, int(sy) - size, size, size)
-                pygame.draw.rect(self.screen, colors.get(item["type"], (255, 255, 255)), rect)
+                pygame.draw.rect(
+                    self.screen, colors.get(item["type"], (255, 255, 255)), rect
+                )
 
     def render(self, surface, player, others=None, items=None):
         self.screen = surface
@@ -137,6 +147,8 @@ class Renderer:
         if items:
             self.render_items(player, items)
         if others:
-            for obj in sorted(others, key=lambda o: -self.track.relative_distance(player.z, o.z)):
+            for obj in sorted(
+                others, key=lambda o: -self.track.relative_distance(player.z, o.z)
+            ):
                 self.render_car(obj, player)
         self.render_player_car()

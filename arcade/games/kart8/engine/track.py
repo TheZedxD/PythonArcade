@@ -12,6 +12,7 @@ class Segment:
 
 class Track:
     """Represents a looping track made of simple segments."""
+
     def __init__(self):
         self.segments = []
         self.cumulative = []
@@ -77,5 +78,7 @@ def create_demo_track():
         track.items.append({"type": "boost", "z": 30 + i * 80, "x": 0.0})
     for i in range(2):
         track.items.append({"type": "oil", "z": 70 + i * 120, "x": 1.5})
-    track.items.append({"type": "shell", "z": 150, "x": -0.5, "speed": 90.0, "active": True})
+    track.items.append(
+        {"type": "shell", "z": 150, "x": -0.5, "speed": 90.0, "active": True}
+    )
     return track

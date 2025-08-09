@@ -12,7 +12,7 @@ DEFAULT_SETTINGS = {
     "window_size": [800, 600],
     "fullscreen": False,
     "sound_volume": 1.0,
-    "keybindings": {}
+    "keybindings": {},
 }
 
 
@@ -31,7 +31,11 @@ def load_games():
                 module = importlib.import_module(module_name)
                 for attr in dir(module):
                     obj = getattr(module, attr)
-                    if isinstance(obj, type) and issubclass(obj, State) and obj is not State:
+                    if (
+                        isinstance(obj, type)
+                        and issubclass(obj, State)
+                        and obj is not State
+                    ):
                         games[name] = obj()
                         break
             except Exception:
@@ -72,14 +76,20 @@ def main():
                 running = False
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_F11:
                 settings["fullscreen"] = not settings.get("fullscreen", False)
-                flags = pygame.SCALED | (pygame.FULLSCREEN if settings.get("fullscreen") else 0)
+                flags = pygame.SCALED | (
+                    pygame.FULLSCREEN if settings.get("fullscreen") else 0
+                )
                 screen = pygame.display.set_mode(base_size, flags)
                 for state in states.values():
                     state.screen = screen
                 save_json(SETTINGS_PATH, settings)
-            elif event.type in (pygame.JOYAXISMOTION, pygame.JOYBALLMOTION,
-                                 pygame.JOYHATMOTION, pygame.JOYBUTTONDOWN,
-                                 pygame.JOYBUTTONUP):
+            elif event.type in (
+                pygame.JOYAXISMOTION,
+                pygame.JOYBALLMOTION,
+                pygame.JOYHATMOTION,
+                pygame.JOYBUTTONDOWN,
+                pygame.JOYBUTTONUP,
+            ):
                 current_state.handle_gamepad(event)
             else:
                 current_state.get_event(event)
@@ -99,7 +109,9 @@ def main():
                 settings = load_json(SETTINGS_PATH, DEFAULT_SETTINGS)
                 pygame.mixer.music.set_volume(settings.get("sound_volume", 1.0))
                 base_size = tuple(settings.get("window_size", [800, 600]))
-                flags = pygame.SCALED | (pygame.FULLSCREEN if settings.get("fullscreen") else 0)
+                flags = pygame.SCALED | (
+                    pygame.FULLSCREEN if settings.get("fullscreen") else 0
+                )
                 screen = pygame.display.set_mode(base_size, flags)
                 for state in states.values():
                     state.screen = screen

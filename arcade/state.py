@@ -1,7 +1,9 @@
 import pygame
 
+
 class State:
     """Base class for game states."""
+
     def __init__(self):
         self.done = False
         self.quit = False
@@ -32,11 +34,19 @@ class State:
         """Dispatch input events to specialized handlers."""
         if event.type in (pygame.KEYDOWN, pygame.KEYUP):
             self.handle_keyboard(event)
-        elif event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP, pygame.MOUSEMOTION):
+        elif event.type in (
+            pygame.MOUSEBUTTONDOWN,
+            pygame.MOUSEBUTTONUP,
+            pygame.MOUSEMOTION,
+        ):
             self.handle_mouse(event)
-        elif event.type in (pygame.JOYAXISMOTION, pygame.JOYBALLMOTION,
-                             pygame.JOYHATMOTION, pygame.JOYBUTTONDOWN,
-                             pygame.JOYBUTTONUP):
+        elif event.type in (
+            pygame.JOYAXISMOTION,
+            pygame.JOYBALLMOTION,
+            pygame.JOYHATMOTION,
+            pygame.JOYBUTTONDOWN,
+            pygame.JOYBUTTONUP,
+        ):
             self.handle_gamepad(event)
 
     def update(self, dt):
