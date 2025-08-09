@@ -46,15 +46,17 @@ class Car:
 
 class Ghost:
     """Simple rubber-band opponent."""
-    def __init__(self, track):
+
+    def __init__(self, track, difficulty: float = 1.0):
         self.track = track
         self.z = 20.0
         self.x = 0.0
         self.speed = 80.0
         self.color = (255, 0, 0)
+        self.difficulty = difficulty
 
     def update(self, dt, target_z):
         diff = self.track.relative_distance(self.z, target_z)
-        base = 100.0
-        self.speed = base + diff * 0.3
+        base = 100.0 * self.difficulty
+        self.speed = base + diff * 0.3 * self.difficulty
         self.z = (self.z + self.speed * dt) % self.track.total_length
