@@ -21,9 +21,9 @@ class Car:
             grip = 0.3
         else:
             grip = 1.0
-        if controls.get('accelerate'):
+        if controls.get("accelerate"):
             self.speed += self.accel * dt * (1.5 if boost else 1.0)
-        elif controls.get('brake'):
+        elif controls.get("brake"):
             self.speed -= self.brake * dt
         else:
             if self.speed > 0:
@@ -33,9 +33,9 @@ class Car:
         self.speed = max(-self.max_speed * 0.5, min(self.speed, self.max_speed))
 
         curve = self.track.curvature_at(self.z)
-        if controls.get('left'):
+        if controls.get("left"):
             self.x -= 1.5 * dt * (self.speed / self.max_speed) * grip
-        if controls.get('right'):
+        if controls.get("right"):
             self.x += 1.5 * dt * (self.speed / self.max_speed) * grip
         # push car to outside of curve
         self.x -= curve * 0.5 * (self.speed / self.max_speed)

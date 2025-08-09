@@ -124,11 +124,7 @@ class WyrmGame(State):
         for chain in self.wyrms:
             head_x, head_y = chain[0]
             new_x = head_x + self.direction
-            if (
-                new_x < 0
-                or new_x >= self.grid_w
-                or (new_x, head_y) in self.blocks
-            ):
+            if new_x < 0 or new_x >= self.grid_w or (new_x, head_y) in self.blocks:
                 self.direction *= -1
                 head_y += 1
                 new_x = head_x + self.direction
@@ -156,16 +152,16 @@ class WyrmGame(State):
         self.screen.fill((0, 0, 0))
         for chain in self.wyrms:
             for x, y in chain:
-                rect = pygame.Rect(
-                    x * GRID_SIZE, y * GRID_SIZE, GRID_SIZE, GRID_SIZE
-                )
+                rect = pygame.Rect(x * GRID_SIZE, y * GRID_SIZE, GRID_SIZE, GRID_SIZE)
                 if self.segment_img:
                     self.screen.blit(self.segment_img, rect)
                 else:
                     pygame.draw.rect(self.screen, (0, 255, 0), rect)
         for x, y in self.blocks:
             pygame.draw.rect(
-                self.screen, (0, 155, 0), (x * GRID_SIZE, y * GRID_SIZE, GRID_SIZE, GRID_SIZE)
+                self.screen,
+                (0, 155, 0),
+                (x * GRID_SIZE, y * GRID_SIZE, GRID_SIZE, GRID_SIZE),
             )
         px, py = self.player
         pygame.draw.rect(
@@ -177,7 +173,12 @@ class WyrmGame(State):
             pygame.draw.rect(
                 self.screen,
                 (0, 255, 0),
-                (x * GRID_SIZE + GRID_SIZE // 4, y * GRID_SIZE, GRID_SIZE // 2, GRID_SIZE // 2),
+                (
+                    x * GRID_SIZE + GRID_SIZE // 4,
+                    y * GRID_SIZE,
+                    GRID_SIZE // 2,
+                    GRID_SIZE // 2,
+                ),
             )
         if self.font:
             text = self.font.render(f"Score: {self.score}", True, (0, 255, 0))

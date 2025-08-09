@@ -5,6 +5,7 @@ import pygame
 from state import State
 from utils.persistence import load_json, save_json
 
+
 class CollectDotsState(State):
     def startup(self, screen, num_players: int = 1):
         super().startup(screen, num_players)
@@ -26,8 +27,9 @@ class CollectDotsState(State):
         self.pause_options = ["Resume", "Quit to Menu"]
         self.pause_index = 0
         self.hs_path = os.path.join(os.path.dirname(__file__), "highscores.json")
-        self.data = load_json(self.hs_path,
-                              {"highscore": 0, "plays": 0, "last_played": None})
+        self.data = load_json(
+            self.hs_path, {"highscore": 0, "plays": 0, "last_played": None}
+        )
         self.high_score = self.data.get("highscore", 0)
         self.pad_dirs = {}
         self.overlay = pygame.Surface(self.screen.get_size(), pygame.SRCALPHA)
@@ -63,8 +65,11 @@ class CollectDotsState(State):
 
     def handle_gamepad(self, event):
         if self.state == "instructions":
-            if event.type in (pygame.JOYBUTTONDOWN, pygame.JOYAXISMOTION,
-                               pygame.JOYHATMOTION):
+            if event.type in (
+                pygame.JOYBUTTONDOWN,
+                pygame.JOYAXISMOTION,
+                pygame.JOYHATMOTION,
+            ):
                 self.state = "play"
         elif self.state == "play":
             if event.type == pygame.JOYBUTTONDOWN and event.button == 7:
@@ -178,10 +183,22 @@ class CollectDotsState(State):
             if self.num_players == 2:
                 text1 = self.big_font.render("P1: Arrows  P2: WASD", True, (0, 255, 0))
             else:
-                text1 = self.big_font.render("Use arrow keys to move the square", True, (0, 255, 0))
+                text1 = self.big_font.render(
+                    "Use arrow keys to move the square", True, (0, 255, 0)
+                )
             text2 = self.big_font.render("Press any key to start", True, (0, 255, 0))
-            rect1 = text1.get_rect(center=(self.screen.get_width() // 2, self.screen.get_height() // 2 - 20))
-            rect2 = text2.get_rect(center=(self.screen.get_width() // 2, self.screen.get_height() // 2 + 20))
+            rect1 = text1.get_rect(
+                center=(
+                    self.screen.get_width() // 2,
+                    self.screen.get_height() // 2 - 20,
+                )
+            )
+            rect2 = text2.get_rect(
+                center=(
+                    self.screen.get_width() // 2,
+                    self.screen.get_height() // 2 + 20,
+                )
+            )
             self.screen.blit(text1, rect1)
             self.screen.blit(text2, rect2)
             return
@@ -207,6 +224,10 @@ class CollectDotsState(State):
                 color = (0, 255, 0) if i == self.pause_index else (0, 155, 0)
                 prefix = "> " if i == self.pause_index else "  "
                 text = self.big_font.render(prefix + option, True, color)
-                rect = text.get_rect(center=(self.screen.get_width() // 2,
-                                             self.screen.get_height() // 2 + i * 40))
+                rect = text.get_rect(
+                    center=(
+                        self.screen.get_width() // 2,
+                        self.screen.get_height() // 2 + i * 40,
+                    )
+                )
                 self.screen.blit(text, rect)

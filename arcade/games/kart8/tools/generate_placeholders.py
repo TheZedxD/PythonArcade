@@ -13,6 +13,7 @@ from pathlib import Path
 # Prefer Pillow if available, otherwise use pygame.
 try:
     from PIL import Image, ImageDraw  # type: ignore
+
     USE_PIL = True
 except Exception:  # pragma: no cover - Pillow not installed
     USE_PIL = False
@@ -20,13 +21,18 @@ except Exception:  # pragma: no cover - Pillow not installed
 if not USE_PIL:
     os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
     import pygame
+
     pygame.init()
 
 OUTPUT_DIR = Path(__file__).resolve().parents[1] / "assets" / "generated"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 
-def make_striped_block(size: tuple[int, int], colors: tuple[tuple[int, int, int], tuple[int, int, int]], stripe: int = 4):
+def make_striped_block(
+    size: tuple[int, int],
+    colors: tuple[tuple[int, int, int], tuple[int, int, int]],
+    stripe: int = 4,
+):
     """Create a surface/image filled with stripes."""
     if USE_PIL:
         img = Image.new("RGBA", size, colors[0])

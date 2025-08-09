@@ -16,11 +16,7 @@ HS_PATH = os.path.join(os.path.dirname(__file__), "highscores.json")
 SETTINGS_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "settings.json")
 
 # Color palette for pills and viruses (RGB values)
-COLORS = [
-    (255, 0, 0),    # Red
-    (0, 0, 255),    # Blue
-    (255, 255, 0)   # Yellow
-]
+COLORS = [(255, 0, 0), (0, 0, 255), (255, 255, 0)]  # Red  # Blue  # Yellow
 
 
 class VirusState(State):
@@ -66,15 +62,20 @@ class VirusState(State):
         self.pause_options = ["Resume", "Volume -", "Volume +", "Fullscreen", "Quit"]
         self.pause_index = 0
         # Load settings (volume, fullscreen) and apply volume
-        self.settings = load_json(SETTINGS_PATH, {
-            "window_size": [800, 600],
-            "fullscreen": False,
-            "sound_volume": 1.0,
-            "keybindings": {}
-        })
+        self.settings = load_json(
+            SETTINGS_PATH,
+            {
+                "window_size": [800, 600],
+                "fullscreen": False,
+                "sound_volume": 1.0,
+                "keybindings": {},
+            },
+        )
         pygame.mixer.music.set_volume(self.settings.get("sound_volume", 1.0))
         # Load high score data
-        self.hs_data = load_json(HS_PATH, {"highscore": 0, "plays": 0, "last_played": None})
+        self.hs_data = load_json(
+            HS_PATH, {"highscore": 0, "plays": 0, "last_played": None}
+        )
         self.high_score = self.hs_data.get("highscore", 0)
         # Initialize Matrix-style falling code background
         width, height = self.screen.get_size()
@@ -101,12 +102,12 @@ class VirusState(State):
             "playfield_y": self.playfield_y,
             "grid": [[None for _ in range(GRID_WIDTH)] for _ in range(GRID_HEIGHT)],
             "score": 0,
-            "drop_delay": 0.8,      # initial fall speed (seconds per drop)
+            "drop_delay": 0.8,  # initial fall speed (seconds per drop)
             "drop_timer": 0,
             "next_piece": None,
             "current": None,
             "gameover": False,
-            "viruses": set()
+            "viruses": set(),
         }
 
     def _init_viruses(self, board):
@@ -121,7 +122,7 @@ class VirusState(State):
             r = random.choice(rows_range)
             c = random.choice(cols_range)
             if board["grid"][r][c] is None:  # empty spot
-                color = random.choice(COLORS)        # choose a random color for the virus
+                color = random.choice(COLORS)  # choose a random color for the virus
                 board["grid"][r][c] = color
                 board["viruses"].add((r, c))
                 placed += 1
@@ -149,7 +150,9 @@ class VirusState(State):
         if self._collides(board, board["current"], dx=0, dy=0):
             board["gameover"] = True
             # End game if this is a single-player game or both players are blocked
-            if self.num_players == 1 or (self.board1["gameover"] and (not self.board2 or self.board2["gameover"])):
+            if self.num_players == 1 or (
+                self.board1["gameover"] and (not self.board2 or self.board2["gameover"])
+            ):
                 self.state = "gameover"
                 self.update_stats()
 
@@ -176,13 +179,19 @@ class VirusState(State):
         if piece["rot"] == 0:
             # Horizontal -> Vertical (pivot on left/top block)
             # Only rotate if within bounds and target cell below pivot is free
-            if piece["y"] < GRID_HEIGHT - 1 and board["grid"][piece["y"] + 1][piece["x"]] is None:
+            if (
+                piece["y"] < GRID_HEIGHT - 1
+                and board["grid"][piece["y"] + 1][piece["x"]] is None
+            ):
                 piece["rot"] = 1
             # else: cannot rotate (bottom out of bounds or blocked)
         else:
             # Vertical -> Horizontal (pivot on top block)
             # Only rotate if within bounds and cell to the right of pivot is free
-            if piece["x"] < GRID_WIDTH - 1 and board["grid"][piece["y"]][piece["x"] + 1] is None:
+            if (
+                piece["x"] < GRID_WIDTH - 1
+                and board["grid"][piece["y"]][piece["x"] + 1] is None
+            ):
                 piece["rot"] = 0
             # else: cannot rotate (at right wall or blocked)
 
@@ -244,11 +253,11 @@ class VirusState(State):
             return False  # no matches found
         # Remove matched cells and count viruses cleared
         viruses_cleared = 0
-        for (r, c) in to_clear:
+        for r, c in to_clear:
             if grid[r][c] is None:
                 continue
             if (r, c) in board["viruses"]:
-                board["viruses"].discard((r, c))   # remove cleared virus from set
+                board["viruses"].discard((r, c))  # remove cleared virus from set
                 viruses_cleared += 1
             grid[r][c] = None
         # Update score for cleared blocks
@@ -263,7 +272,15 @@ class VirusState(State):
             opp_pf_y = other_board["playfield_y"]
             popup_x = opp_pf_x + GRID_WIDTH * self.cell + 50
             popup_y = opp_pf_y + 50 + 120
-            self.popups.append({"text": f"-{deduction}", "x": popup_x, "y": popup_y, "color": (255, 0, 0), "timer": 1.5})
+            self.popups.append(
+                {
+                    "text": f"-{deduction}",
+                    "x": popup_x,
+                    "y": popup_y,
+                    "color": (255, 0, 0),
+                    "timer": 1.5,
+                }
+            )
         # Let any floating pieces fall down into cleared gaps
         self._apply_gravity(board)
         # Check for chain reactions (continue clearing as long as new matches form)
@@ -302,7 +319,7 @@ class VirusState(State):
                 break
             # Clear new matches
             viruses_cleared_again = 0
-            for (r, c) in to_clear_again:
+            for r, c in to_clear_again:
                 if grid[r][c] is None:
                     continue
                 if (r, c) in board["viruses"]:
@@ -316,7 +333,15 @@ class VirusState(State):
                 other_board["score"] = max(0, other_board["score"] - deduction)
                 popup_x = other_board["playfield_x"] + GRID_WIDTH * self.cell + 50
                 popup_y = other_board["playfield_y"] + 50 + 120
-                self.popups.append({"text": f"-{deduction}", "x": popup_x, "y": popup_y, "color": (255, 0, 0), "timer": 1.5})
+                self.popups.append(
+                    {
+                        "text": f"-{deduction}",
+                        "x": popup_x,
+                        "y": popup_y,
+                        "color": (255, 0, 0),
+                        "timer": 1.5,
+                    }
+                )
             self._apply_gravity(board)
         return True
 
@@ -341,7 +366,7 @@ class VirusState(State):
                 if self.num_players == 2:
                     # In 2-player mode, wait for mode selection (1,2,3 keys)
                     if event.key in (pygame.K_1, pygame.K_KP1):
-                        self.time_left = 60   # 1-minute Blitz
+                        self.time_left = 60  # 1-minute Blitz
                         self.state = "play"
                     elif event.key in (pygame.K_2, pygame.K_KP2):
                         self.time_left = 120  # 2-minute Normal
@@ -361,30 +386,50 @@ class VirusState(State):
                     self.pause_index = 0
                 # Player 1 controls (arrows + space)
                 if not self.board1["gameover"]:
-                    if event.key == pygame.K_LEFT and not self._collides(self.board1, self.board1["current"], dx=-1, dy=0):
+                    if event.key == pygame.K_LEFT and not self._collides(
+                        self.board1, self.board1["current"], dx=-1, dy=0
+                    ):
                         self.board1["current"]["x"] -= 1
-                    elif event.key == pygame.K_RIGHT and not self._collides(self.board1, self.board1["current"], dx=1, dy=0):
+                    elif event.key == pygame.K_RIGHT and not self._collides(
+                        self.board1, self.board1["current"], dx=1, dy=0
+                    ):
                         self.board1["current"]["x"] += 1
-                    elif event.key == pygame.K_DOWN and not self._collides(self.board1, self.board1["current"], dx=0, dy=1):
+                    elif event.key == pygame.K_DOWN and not self._collides(
+                        self.board1, self.board1["current"], dx=0, dy=1
+                    ):
                         self.board1["current"]["y"] += 1  # soft drop
                     elif event.key == pygame.K_UP:
                         self._rotate_piece(self.board1)
                     elif event.key == pygame.K_SPACE:
                         # Hard drop: move down until collision
-                        while not self._collides(self.board1, self.board1["current"], dx=0, dy=1):
+                        while not self._collides(
+                            self.board1, self.board1["current"], dx=0, dy=1
+                        ):
                             self.board1["current"]["y"] += 1
                 # Player 2 controls (WASD + F) if in 2-player mode
-                if self.num_players == 2 and self.board2 and not self.board2["gameover"]:
-                    if event.key == pygame.K_a and not self._collides(self.board2, self.board2["current"], dx=-1, dy=0):
+                if (
+                    self.num_players == 2
+                    and self.board2
+                    and not self.board2["gameover"]
+                ):
+                    if event.key == pygame.K_a and not self._collides(
+                        self.board2, self.board2["current"], dx=-1, dy=0
+                    ):
                         self.board2["current"]["x"] -= 1
-                    elif event.key == pygame.K_d and not self._collides(self.board2, self.board2["current"], dx=1, dy=0):
+                    elif event.key == pygame.K_d and not self._collides(
+                        self.board2, self.board2["current"], dx=1, dy=0
+                    ):
                         self.board2["current"]["x"] += 1
-                    elif event.key == pygame.K_s and not self._collides(self.board2, self.board2["current"], dx=0, dy=1):
+                    elif event.key == pygame.K_s and not self._collides(
+                        self.board2, self.board2["current"], dx=0, dy=1
+                    ):
                         self.board2["current"]["y"] += 1
                     elif event.key == pygame.K_w:
                         self._rotate_piece(self.board2)
                     elif event.key == pygame.K_f:
-                        while not self._collides(self.board2, self.board2["current"], dx=0, dy=1):
+                        while not self._collides(
+                            self.board2, self.board2["current"], dx=0, dy=1
+                        ):
                             self.board2["current"]["y"] += 1
         elif self.state == "pause":
             if event.type == pygame.KEYDOWN:
@@ -405,7 +450,9 @@ class VirusState(State):
                         self.next = "menu"
                     elif choice == "Fullscreen":
                         pygame.display.toggle_fullscreen()
-                        self.settings["fullscreen"] = not self.settings.get("fullscreen", False)
+                        self.settings["fullscreen"] = not self.settings.get(
+                            "fullscreen", False
+                        )
                         save_json(SETTINGS_PATH, self.settings)
                     elif choice == "Volume +":
                         # Increase volume
@@ -439,30 +486,44 @@ class VirusState(State):
         elif self.state == "play":
             # Map gamepad buttons similar to keyboard for P1
             if event.type == pygame.JOYBUTTONDOWN:
-                if event.button == 0:   # A button -> rotate P1
+                if event.button == 0:  # A button -> rotate P1
                     self._rotate_piece(self.board1)
-                elif event.button == 1: # B button -> hard drop P1
-                    while not self._collides(self.board1, self.board1["current"], dx=0, dy=1):
+                elif event.button == 1:  # B button -> hard drop P1
+                    while not self._collides(
+                        self.board1, self.board1["current"], dx=0, dy=1
+                    ):
                         self.board1["current"]["y"] += 1
                 elif event.button in (7, 9):  # Start/Select -> pause
                     self.state = "pause"
                     self.pause_index = 0
             elif event.type == pygame.JOYAXISMOTION:
                 if event.axis == 0:  # left stick horizontal
-                    if event.value < -0.5 and not self._collides(self.board1, self.board1["current"], dx=-1, dy=0):
+                    if event.value < -0.5 and not self._collides(
+                        self.board1, self.board1["current"], dx=-1, dy=0
+                    ):
                         self.board1["current"]["x"] -= 1
-                    elif event.value > 0.5 and not self._collides(self.board1, self.board1["current"], dx=1, dy=0):
+                    elif event.value > 0.5 and not self._collides(
+                        self.board1, self.board1["current"], dx=1, dy=0
+                    ):
                         self.board1["current"]["x"] += 1
                 elif event.axis == 1:  # left stick vertical
-                    if event.value > 0.5 and not self._collides(self.board1, self.board1["current"], dx=0, dy=1):
+                    if event.value > 0.5 and not self._collides(
+                        self.board1, self.board1["current"], dx=0, dy=1
+                    ):
                         self.board1["current"]["y"] += 1
             elif event.type == pygame.JOYHATMOTION:
                 x, y = event.value  # D-pad
-                if x == -1 and not self._collides(self.board1, self.board1["current"], dx=-1, dy=0):
+                if x == -1 and not self._collides(
+                    self.board1, self.board1["current"], dx=-1, dy=0
+                ):
                     self.board1["current"]["x"] -= 1
-                elif x == 1 and not self._collides(self.board1, self.board1["current"], dx=1, dy=0):
+                elif x == 1 and not self._collides(
+                    self.board1, self.board1["current"], dx=1, dy=0
+                ):
                     self.board1["current"]["x"] += 1
-                if y == -1 and not self._collides(self.board1, self.board1["current"], dx=0, dy=1):
+                if y == -1 and not self._collides(
+                    self.board1, self.board1["current"], dx=0, dy=1
+                ):
                     self.board1["current"]["y"] += 1
                 elif y == 1:
                     self._rotate_piece(self.board1)
@@ -491,7 +552,9 @@ class VirusState(State):
                         self.next = "menu"
                     elif choice == "Fullscreen":
                         pygame.display.toggle_fullscreen()
-                        self.settings["fullscreen"] = not self.settings.get("fullscreen", False)
+                        self.settings["fullscreen"] = not self.settings.get(
+                            "fullscreen", False
+                        )
                         save_json(SETTINGS_PATH, self.settings)
                     elif choice == "Volume +":
                         vol = min(1.0, self.settings.get("sound_volume", 1.0) + 0.1)
@@ -503,7 +566,11 @@ class VirusState(State):
                         self.settings["sound_volume"] = round(vol, 2)
                         pygame.mixer.music.set_volume(vol)
                         save_json(SETTINGS_PATH, self.settings)
-                elif event.button in (1, 7, 9):  # B or Start/Select to resume without change
+                elif event.button in (
+                    1,
+                    7,
+                    9,
+                ):  # B or Start/Select to resume without change
                     self.state = "play"
         elif self.state == "gameover":
             if event.type == pygame.JOYBUTTONDOWN:
@@ -585,24 +652,34 @@ class VirusState(State):
             # Draw playfield grid border
             px = board["playfield_x"]
             py = board["playfield_y"]
-            playfield_rect = pygame.Rect(px - 4, py - 4, GRID_WIDTH * self.cell + 8, GRID_HEIGHT * self.cell + 8)
+            playfield_rect = pygame.Rect(
+                px - 4, py - 4, GRID_WIDTH * self.cell + 8, GRID_HEIGHT * self.cell + 8
+            )
             pygame.draw.rect(self.screen, self.normal_color, playfield_rect, 2)
             # Draw placed blocks and viruses
             for r in range(GRID_HEIGHT):
                 for c in range(GRID_WIDTH):
                     color = board["grid"][r][c]
                     if color:
-                        rect = pygame.Rect(px + c * self.cell, py + r * self.cell, self.cell, self.cell)
+                        rect = pygame.Rect(
+                            px + c * self.cell, py + r * self.cell, self.cell, self.cell
+                        )
                         pygame.draw.rect(self.screen, color, rect)
                         pygame.draw.rect(self.screen, self.normal_color, rect, 1)
             # Draw current falling piece (if game not over on that board)
-            if self.state in ("play", "pause") and not board["gameover"] and board["current"]:
+            if (
+                self.state in ("play", "pause")
+                and not board["gameover"]
+                and board["current"]
+            ):
                 piece = board["current"]
                 offsets = [(0, 0), (1, 0)] if piece["rot"] == 0 else [(0, 0), (0, 1)]
                 for idx2, (ox, oy) in enumerate(offsets):
                     cx = piece["x"] + ox
                     cy = piece["y"] + oy
-                    rect = pygame.Rect(px + cx * self.cell, py + cy * self.cell, self.cell, self.cell)
+                    rect = pygame.Rect(
+                        px + cx * self.cell, py + cy * self.cell, self.cell, self.cell
+                    )
                     pygame.draw.rect(self.screen, piece["colors"][idx2], rect)
                     pygame.draw.rect(self.screen, self.normal_color, rect, 1)
             # Draw next piece preview box and piece
@@ -614,7 +691,9 @@ class VirusState(State):
             if next_piece:
                 # Always draw preview in horizontal orientation
                 for j, color in enumerate(next_piece["colors"]):
-                    rect = pygame.Rect(preview_x + j * self.cell, preview_y, self.cell, self.cell)
+                    rect = pygame.Rect(
+                        preview_x + j * self.cell, preview_y, self.cell, self.cell
+                    )
                     pygame.draw.rect(self.screen, color, rect)
                     pygame.draw.rect(self.screen, self.normal_color, rect, 1)
             # Draw score labels
@@ -626,7 +705,9 @@ class VirusState(State):
             self.screen.blit(score_surf, (preview_x, preview_y + 120))
             if idx == 0:
                 # Player 1 side: show high score
-                hs_surf = self.font.render(f"High: {self.high_score}", True, self.highlight_color)
+                hs_surf = self.font.render(
+                    f"High: {self.high_score}", True, self.highlight_color
+                )
                 self.screen.blit(hs_surf, (preview_x, preview_y + 150))
         # Draw any floating score popups
         for popup in self.popups:
@@ -640,14 +721,22 @@ class VirusState(State):
             self.screen.blit(title_text, title_rect)
             if self.board2:
                 # 2-player: prompt mode selection
-                info_text = self.font.render("P1: Arrows   P2: WASD", True, self.highlight_color)
-                mode_text = self.font.render("Press 1 (Blitz), 2 (Normal), or 3 (Long)", True, self.highlight_color)
+                info_text = self.font.render(
+                    "P1: Arrows   P2: WASD", True, self.highlight_color
+                )
+                mode_text = self.font.render(
+                    "Press 1 (Blitz), 2 (Normal), or 3 (Long)",
+                    True,
+                    self.highlight_color,
+                )
                 rect2 = info_text.get_rect(center=(width // 2, height // 2))
                 rect3 = mode_text.get_rect(center=(width // 2, height // 2 + 40))
                 self.screen.blit(info_text, rect2)
                 self.screen.blit(mode_text, rect3)
             else:
-                info_text = self.font.render("Press any key to start", True, self.highlight_color)
+                info_text = self.font.render(
+                    "Press any key to start", True, self.highlight_color
+                )
                 rect = info_text.get_rect(center=(width // 2, height // 2))
                 self.screen.blit(info_text, rect)
         elif self.state == "pause":
@@ -657,10 +746,14 @@ class VirusState(State):
             self.screen.blit(overlay, (0, 0))
             # Pause menu options
             for i, option in enumerate(self.pause_options):
-                color = self.highlight_color if i == self.pause_index else self.normal_color
+                color = (
+                    self.highlight_color if i == self.pause_index else self.normal_color
+                )
                 prefix = "> " if i == self.pause_index else "  "
                 option_surf = self.big_font.render(prefix + option, True, color)
-                opt_rect = option_surf.get_rect(center=(width // 2, height // 3 + i * 40))
+                opt_rect = option_surf.get_rect(
+                    center=(width // 2, height // 3 + i * 40)
+                )
                 self.screen.blit(option_surf, opt_rect)
         elif self.state == "gameover":
             # Darken screen

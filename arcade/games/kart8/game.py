@@ -104,7 +104,8 @@ class KartGame(State):
         miny, maxy = min(ys), max(ys)
         scale = min((w - 10) / (maxx - minx + 1e-6), (h - 10) / (maxy - miny + 1e-6))
         self.map_points = [
-            (int((px - minx) * scale) + 5, int((py - miny) * scale) + 5) for px, py in pts
+            (int((px - minx) * scale) + 5, int((py - miny) * scale) + 5)
+            for px, py in pts
         ]
         surf = pygame.Surface((w, h))
         if pygame.display.get_surface():
@@ -123,7 +124,7 @@ class KartGame(State):
             "Esc to menu",
         ]
         font = pygame.font.SysFont("Courier", 18)
-        width = max(font.size(l)[0] for l in lines) + 20
+        width = max(font.size(line)[0] for line in lines) + 20
         height = len(lines) * 24 + 10
         surf = pygame.Surface((width, height))
         surf.fill((0, 0, 0))
@@ -178,10 +179,10 @@ class KartGame(State):
         keys = pygame.key.get_pressed()
         # player 1 controls
         controls1 = {
-            'accelerate': keys[pygame.K_w],
-            'brake': keys[pygame.K_s],
-            'left': keys[pygame.K_a],
-            'right': keys[pygame.K_d],
+            "accelerate": keys[pygame.K_w],
+            "brake": keys[pygame.K_s],
+            "left": keys[pygame.K_a],
+            "right": keys[pygame.K_d],
         }
         boost1 = keys[pygame.K_LSHIFT]
         prev_z1 = self.players[0].z
@@ -196,10 +197,10 @@ class KartGame(State):
 
         if self.num_players > 1:
             controls2 = {
-                'accelerate': keys[pygame.K_UP],
-                'brake': keys[pygame.K_DOWN],
-                'left': keys[pygame.K_LEFT],
-                'right': keys[pygame.K_RIGHT],
+                "accelerate": keys[pygame.K_UP],
+                "brake": keys[pygame.K_DOWN],
+                "left": keys[pygame.K_LEFT],
+                "right": keys[pygame.K_RIGHT],
             }
             boost2 = keys[pygame.K_RCTRL]
             prev_z2 = self.players[1].z
@@ -218,7 +219,9 @@ class KartGame(State):
         if self.items_enabled:
             for item in self.track.items:
                 if item.get("type") == "shell" and item.get("active", True):
-                    item["z"] = (item["z"] + item.get("speed", 0) * dt) % self.track.total_length
+                    item["z"] = (
+                        item["z"] + item.get("speed", 0) * dt
+                    ) % self.track.total_length
             for p in self.players:
                 for item in self.track.items:
                     if not item.get("active", True):
@@ -249,7 +252,9 @@ class KartGame(State):
 
     def record_time(self, player_index: int):
         mode = "1p" if self.num_players == 1 else "2p"
-        times = self.data.setdefault("times", {}).setdefault(mode, {"last": [], "best": []})
+        times = self.data.setdefault("times", {}).setdefault(
+            mode, {"last": [], "best": []}
+        )
         times["last"] = self.lap_times[player_index][:]
         total = sum(self.lap_times[player_index])
         best = times.get("best", []) + [total]
@@ -259,16 +264,23 @@ class KartGame(State):
     def draw(self):
         self.screen.fill((0, 0, 0))
         if self.num_players == 1:
-            self.renderers[0].render(self.cameras[0], self.players[0],
-                                    [self.ghost] if self.ghost else None,
-                                    self.track.items if self.items_enabled else None)
+            self.renderers[0].render(
+                self.cameras[0],
+                self.players[0],
+                [self.ghost] if self.ghost else None,
+                self.track.items if self.items_enabled else None,
+            )
             self.draw_hud(self.cameras[0], self.players[0], self.laps[0])
             self.screen.blit(self.cameras[0], (0, 0))
         else:
             for i in range(2):
                 others = [self.players[1 - i]]
-                self.renderers[i].render(self.cameras[i], self.players[i], others,
-                                        self.track.items if self.items_enabled else None)
+                self.renderers[i].render(
+                    self.cameras[i],
+                    self.players[i],
+                    others,
+                    self.track.items if self.items_enabled else None,
+                )
                 self.draw_hud(self.cameras[i], self.players[i], self.laps[i])
             if self.layout == "vertical":
                 h = self.screen.get_height() // 2
@@ -286,4 +298,3 @@ class KartGame(State):
 
 # expose Game class for loader
 Game = KartGame
-

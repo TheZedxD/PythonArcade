@@ -4,6 +4,7 @@ import pygame
 
 from ..game import Game
 
+
 def test_smoke():
     os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
     pygame.init()

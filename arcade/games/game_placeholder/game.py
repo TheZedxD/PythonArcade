@@ -1,6 +1,7 @@
 import pygame
 from state import State
 
+
 class PlaceholderGameState(State):
     def startup(self, screen, num_players: int = 1):
         super().startup(screen, num_players)
@@ -17,6 +18,7 @@ class PlaceholderGameState(State):
     def draw(self):
         self.screen.fill((0, 0, 0))
         text = self.font.render("WORK IN PROGRESS", True, (0, 255, 0))
-        rect = text.get_rect(center=(self.screen.get_width() // 2,
-                                     self.screen.get_height() // 2))
+        rect = text.get_rect(
+            center=(self.screen.get_width() // 2, self.screen.get_height() // 2)
+        )
         self.screen.blit(text, rect)
