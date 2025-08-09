@@ -87,6 +87,8 @@ def main():
         current_state.update(dt)
         current_state.draw()
         pygame.display.flip()
+        if os.environ.get("PYARCADE_DEBUG_FPS") == "1":
+            pygame.display.set_caption(f"Arcade {clock.get_fps():.1f} FPS")
 
         if current_state.quit:
             running = False
@@ -96,6 +98,7 @@ def main():
             if isinstance(current_state, SettingsState):
                 settings = load_json(SETTINGS_PATH, DEFAULT_SETTINGS)
                 pygame.mixer.music.set_volume(settings.get("sound_volume", 1.0))
+                base_size = tuple(settings.get("window_size", [800, 600]))
                 flags = pygame.SCALED | (pygame.FULLSCREEN if settings.get("fullscreen") else 0)
                 screen = pygame.display.set_mode(base_size, flags)
                 for state in states.values():

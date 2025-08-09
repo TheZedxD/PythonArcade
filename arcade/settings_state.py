@@ -8,8 +8,9 @@ DEFAULT_SETTINGS = {
     "window_size": [800, 600],
     "fullscreen": False,
     "sound_volume": 1.0,
-    "keybindings": {}
+    "keybindings": {},
 }
+RESOLUTIONS = [(640, 480), (800, 600)]
 
 
 class SettingsState(State):
@@ -18,7 +19,9 @@ class SettingsState(State):
         self.font = pygame.font.SysFont("Courier", 32)
         self.index = 0
         self.settings = load_json(SETTINGS_PATH, DEFAULT_SETTINGS)
-        self.options = ["Fullscreen", "Volume", "Back"]
+        size = tuple(self.settings.get("window_size", RESOLUTIONS[1]))
+        self.res_index = RESOLUTIONS.index(size) if size in RESOLUTIONS else 1
+        self.options = ["Fullscreen", "Resolution", "Volume", "Back"]
 
     def handle_keyboard(self, event):
         if event.type == pygame.KEYDOWN:
@@ -75,6 +78,12 @@ class SettingsState(State):
         if option == "Fullscreen":
             if delta != 0:
                 self.settings["fullscreen"] = not self.settings.get("fullscreen", False)
+        elif option == "Resolution":
+            if delta < 0:
+                self.res_index = max(0, self.res_index - 1)
+            elif delta > 0:
+                self.res_index = min(len(RESOLUTIONS) - 1, self.res_index + 1)
+            self.settings["window_size"] = list(RESOLUTIONS[self.res_index])
         elif option == "Volume":
             vol = self.settings.get("sound_volume", 1.0) + delta
             self.settings["sound_volume"] = max(0.0, min(1.0, round(vol, 2)))
@@ -88,6 +97,9 @@ class SettingsState(State):
             prefix = "> " if i == self.index else "  "
             if option == "Fullscreen":
                 value = "On" if self.settings.get("fullscreen", False) else "Off"
+            elif option == "Resolution":
+                w, h = self.settings.get("window_size", RESOLUTIONS[self.res_index])
+                value = f"{w}x{h}"
             elif option == "Volume":
                 value = f"{self.settings.get('sound_volume', 1.0):.1f}"
             else:

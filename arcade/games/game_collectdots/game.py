@@ -30,6 +30,7 @@ class CollectDotsState(State):
                               {"highscore": 0, "plays": 0, "last_played": None})
         self.high_score = self.data.get("highscore", 0)
         self.pad_dirs = {}
+        self.overlay = pygame.Surface(self.screen.get_size(), pygame.SRCALPHA)
 
     def respawn_dot(self):
         width, height = self.screen.get_size()
@@ -200,9 +201,8 @@ class CollectDotsState(State):
             self.screen.blit(score_text, (10, 10))
 
         if self.state == "pause":
-            overlay = pygame.Surface(self.screen.get_size(), pygame.SRCALPHA)
-            overlay.fill((0, 0, 0, 200))
-            self.screen.blit(overlay, (0, 0))
+            self.overlay.fill((0, 0, 0, 200))
+            self.screen.blit(self.overlay, (0, 0))
             for i, option in enumerate(self.pause_options):
                 color = (0, 255, 0) if i == self.pause_index else (0, 155, 0)
                 prefix = "> " if i == self.pause_index else "  "
