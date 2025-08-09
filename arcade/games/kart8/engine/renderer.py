@@ -2,11 +2,11 @@ import pygame
 
 
 class Renderer:
-    def __init__(self, screen, track):
-        self.screen = screen
+    def __init__(self, track):
         self.track = track
         self.scale = 200.0  # scaling factor for width
         self.cam_height = 1.0
+        self.screen = None
 
     def project(self, obj_z, obj_x, player):
         dz = obj_z - player.z
@@ -82,9 +82,27 @@ class Renderer:
         rect = pygame.Rect(width // 2 - 10, height - 40, 20, 40)
         pygame.draw.rect(self.screen, (0, 0, 255), rect)
 
-    def render(self, player, others=None):
+    def render_items(self, player, items):
+        colors = {
+            "boost": (255, 255, 0),
+            "oil": (0, 0, 0),
+            "shell": (255, 0, 0),
+        }
+        for item in items:
+            res = self.project(item["z"], item["x"], player)
+            if not res:
+                continue
+            sx, sy, scale = res
+            size = max(5, int(20 * scale / self.scale))
+            rect = pygame.Rect(int(sx) - size // 2, int(sy) - size, size, size)
+            pygame.draw.rect(self.screen, colors.get(item["type"], (255, 255, 255)), rect)
+
+    def render(self, surface, player, others=None, items=None):
+        self.screen = surface
         self.render_road(player)
         self.render_billboards(player)
+        if items:
+            self.render_items(player, items)
         if others:
             for obj in sorted(others, key=lambda o: -self.track.relative_distance(player.z, o.z)):
                 self.render_car(obj, player)

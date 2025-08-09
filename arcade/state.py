@@ -8,13 +8,21 @@ class State:
         self.next = None
         self.screen = None
         self.num_players = 1
+        # arbitrary options passed when the state starts
+        self.options = {}
 
-    def startup(self, screen, num_players: int = 1):
-        """Called when the state starts up."""
+    def startup(self, screen, num_players: int = 1, **options):
+        """Called when the state starts up.
+
+        Additional keyword *options* are stored on the state so that
+        launcher menus can pass configuration such as enabling items in
+        games without changing the call signature for every state.
+        """
         self.done = False
         self.quit = False
         self.screen = screen
         self.num_players = num_players
+        self.options = options
 
     def cleanup(self):
         """Cleanup before the state is destroyed or switched."""
