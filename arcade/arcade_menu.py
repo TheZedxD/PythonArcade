@@ -85,8 +85,12 @@ class MainMenuState(State):
     def _build_surfaces(self):
         width, height = self.screen.get_size()
         self.background = pygame.Surface((width, height)).convert()
-        self.menu_surface = pygame.Surface((width, height), pygame.SRCALPHA).convert_alpha()
-        self.scanlines = pygame.Surface((width, height), pygame.SRCALPHA).convert_alpha()
+        self.menu_surface = pygame.Surface(
+            (width, height), pygame.SRCALPHA
+        ).convert_alpha()
+        self.scanlines = pygame.Surface(
+            (width, height), pygame.SRCALPHA
+        ).convert_alpha()
         for y in range(0, height, 2):
             pygame.draw.line(self.scanlines, (0, 0, 0, 40), (0, y), (width, y))
         self.rain_surfaces = {
@@ -97,15 +101,27 @@ class MainMenuState(State):
         self.option_positions = []
         y_start = height // 3
         for i, (_, label) in enumerate(self.options):
-            normal = self.font.render("  " + label, True, self.normal_color).convert_alpha()
-            highlight = self.font.render("> " + label, True, self.highlight_color).convert_alpha()
+            normal = self.font.render(
+                "  " + label, True, self.normal_color
+            ).convert_alpha()
+            highlight = self.font.render(
+                "> " + label, True, self.highlight_color
+            ).convert_alpha()
             rect = normal.get_rect(center=(width // 2, y_start + i * 40))
             self.option_surfaces.append((normal, highlight))
             self.option_positions.append(rect)
-        self.prompt_players = self.font.render("1 or 2 PLAYERS?", True, self.highlight_color).convert_alpha()
-        self.prompt_items = self.font.render("ITEMS ON? Y/N", True, self.highlight_color).convert_alpha()
-        self.prompt_rect = self.prompt_players.get_rect(center=(width // 2, height // 2))
-        self.title_base = self.title_font.render("ARCADE TERMINAL", True, (0, 200, 0)).convert_alpha()
+        self.prompt_players = self.font.render(
+            "1 or 2 PLAYERS?", True, self.highlight_color
+        ).convert_alpha()
+        self.prompt_items = self.font.render(
+            "ITEMS ON? Y/N", True, self.highlight_color
+        ).convert_alpha()
+        self.prompt_rect = self.prompt_players.get_rect(
+            center=(width // 2, height // 2)
+        )
+        self.title_base = self.title_font.render(
+            "ARCADE TERMINAL", True, (0, 200, 0)
+        ).convert_alpha()
         self.title_rect = self.title_base.get_rect(center=(width // 2, height // 5))
 
     def handle_keyboard(self, event):

@@ -53,8 +53,10 @@ def main():
         joysticks.append(joy)
     settings = load_json(SETTINGS_PATH, DEFAULT_SETTINGS)
     base_size = tuple(settings.get("window_size", [800, 600]))
-    flags = pygame.SCALED | pygame.DOUBLEBUF | (
-        pygame.FULLSCREEN if settings.get("fullscreen") else 0
+    flags = (
+        pygame.SCALED
+        | pygame.DOUBLEBUF
+        | (pygame.FULLSCREEN if settings.get("fullscreen") else 0)
     )
     screen = pygame.display.set_mode(base_size, flags, vsync=1)
     pygame.display.set_caption("Arcade")
@@ -78,8 +80,10 @@ def main():
                 running = False
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_F11:
                 settings["fullscreen"] = not settings.get("fullscreen", False)
-                flags = pygame.SCALED | pygame.DOUBLEBUF | (
-                    pygame.FULLSCREEN if settings.get("fullscreen") else 0
+                flags = (
+                    pygame.SCALED
+                    | pygame.DOUBLEBUF
+                    | (pygame.FULLSCREEN if settings.get("fullscreen") else 0)
                 )
                 screen = pygame.display.set_mode(base_size, flags, vsync=1)
                 for state in states.values():
@@ -111,8 +115,10 @@ def main():
                 settings = load_json(SETTINGS_PATH, DEFAULT_SETTINGS)
                 pygame.mixer.music.set_volume(settings.get("sound_volume", 1.0))
                 base_size = tuple(settings.get("window_size", [800, 600]))
-                flags = pygame.SCALED | pygame.DOUBLEBUF | (
-                    pygame.FULLSCREEN if settings.get("fullscreen") else 0
+                flags = (
+                    pygame.SCALED
+                    | pygame.DOUBLEBUF
+                    | (pygame.FULLSCREEN if settings.get("fullscreen") else 0)
                 )
                 screen = pygame.display.set_mode(base_size, flags, vsync=1)
                 for state in states.values():
