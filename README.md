@@ -45,6 +45,30 @@ scripts\update_windows.bat
   install SDL libraries or run with `SDL_VIDEODRIVER=dummy`.
 - Updating graphics drivers often fixes window creation or performance issues.
 
+## Development & Testing
+
+Contributions are welcome. To verify your changes locally:
+
+1. Install development dependencies:
+
+   ```sh
+   pip install -r requirements-dev.txt
+   ```
+
+2. Run linters and compile-time checks:
+
+   ```sh
+   ruff check .
+   black --check .
+   python -m compileall .
+   ```
+
+3. Execute the test suite:
+
+   ```sh
+   pytest
+   ```
+
 ## Games
 
 Currently included:
