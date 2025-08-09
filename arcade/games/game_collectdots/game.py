@@ -5,6 +5,10 @@ import pygame
 from state import State
 from utils.persistence import load_json, save_json
 
+SETTINGS_PATH = os.path.join(
+    os.path.dirname(__file__), "..", "..", "settings.json"
+)
+
 
 class CollectDotsState(State):
     def startup(self, screen, num_players: int = 1):
@@ -24,13 +28,29 @@ class CollectDotsState(State):
         self.respawn_dot()
         self.speed = 200
         self.state = "instructions"
-        self.pause_options = ["Resume", "Quit to Menu"]
+        self.pause_options = [
+            "Resume",
+            "Volume -",
+            "Volume +",
+            "Fullscreen",
+            "Quit",
+        ]
         self.pause_index = 0
         self.hs_path = os.path.join(os.path.dirname(__file__), "highscores.json")
         self.data = load_json(
             self.hs_path, {"highscore": 0, "plays": 0, "last_played": None}
         )
         self.high_score = self.data.get("highscore", 0)
+        self.settings = load_json(
+            SETTINGS_PATH,
+            {
+                "window_size": [800, 600],
+                "fullscreen": False,
+                "sound_volume": 1.0,
+                "keybindings": {},
+            },
+        )
+        pygame.mixer.music.set_volume(self.settings.get("sound_volume", 1.0))
         self.pad_dirs = {}
         self.overlay = pygame.Surface(self.screen.get_size(), pygame.SRCALPHA)
 
@@ -58,10 +78,28 @@ class CollectDotsState(State):
                     choice = self.pause_options[self.pause_index]
                     if choice == "Resume":
                         self.state = "play"
-                    elif choice == "Quit to Menu":
+                    elif choice == "Quit":
                         self.update_stats()
                         self.done = True
                         self.next = "menu"
+                    elif choice == "Fullscreen":
+                        pygame.display.toggle_fullscreen()
+                        self.settings["fullscreen"] = not self.settings.get(
+                            "fullscreen", False
+                        )
+                        save_json(SETTINGS_PATH, self.settings)
+                    elif choice == "Volume +":
+                        vol = min(1.0, self.settings.get("sound_volume", 1.0) + 0.1)
+                        self.settings["sound_volume"] = round(vol, 2)
+                        pygame.mixer.music.set_volume(vol)
+                        save_json(SETTINGS_PATH, self.settings)
+                    elif choice == "Volume -":
+                        vol = max(0.0, self.settings.get("sound_volume", 1.0) - 0.1)
+                        self.settings["sound_volume"] = round(vol, 2)
+                        pygame.mixer.music.set_volume(vol)
+                        save_json(SETTINGS_PATH, self.settings)
+                elif event.key == pygame.K_ESCAPE:
+                    self.state = "play"
 
     def handle_gamepad(self, event):
         if self.state == "instructions":
@@ -104,10 +142,26 @@ class CollectDotsState(State):
                     choice = self.pause_options[self.pause_index]
                     if choice == "Resume":
                         self.state = "play"
-                    elif choice == "Quit to Menu":
+                    elif choice == "Quit":
                         self.update_stats()
                         self.done = True
                         self.next = "menu"
+                    elif choice == "Fullscreen":
+                        pygame.display.toggle_fullscreen()
+                        self.settings["fullscreen"] = not self.settings.get(
+                            "fullscreen", False
+                        )
+                        save_json(SETTINGS_PATH, self.settings)
+                    elif choice == "Volume +":
+                        vol = min(1.0, self.settings.get("sound_volume", 1.0) + 0.1)
+                        self.settings["sound_volume"] = round(vol, 2)
+                        pygame.mixer.music.set_volume(vol)
+                        save_json(SETTINGS_PATH, self.settings)
+                    elif choice == "Volume -":
+                        vol = max(0.0, self.settings.get("sound_volume", 1.0) - 0.1)
+                        self.settings["sound_volume"] = round(vol, 2)
+                        pygame.mixer.music.set_volume(vol)
+                        save_json(SETTINGS_PATH, self.settings)
                 elif event.button in (1, 7, 9):
                     self.state = "play"
 
@@ -124,6 +178,10 @@ class CollectDotsState(State):
 
     def update(self, dt):
         if self.state != "play":
+            if self.state == "pause":
+                pygame.mixer.music.set_volume(
+                    self.settings.get("sound_volume", 1.0)
+                )
             return
         keys = pygame.key.get_pressed()
         if self.num_players == 2:
