@@ -9,6 +9,10 @@ Simple Pygame state-driven arcade shell.
 ./install.sh
 ```
 
+The script also detects Raspberry Pi OS and will prompt you to ensure SDL
+drivers are installed. A graphical environment is required; running headless
+on a Pi will fail because Pygame needs a display.
+
 ### Windows
 ```
 install.bat

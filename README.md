@@ -12,7 +12,9 @@ cd arcade
 ./install.sh   # or install.bat on Windows
 ```
 
-This will create a `venv` and generate a `run.sh` (or `run.bat`) launcher.
+This will create a `venv` and generate a `run.sh` (or `run.bat`) launcher. On
+Raspberry Pi OS the script detects the platform and reminds you to ensure SDL
+drivers are installed. A graphical desktop environment is required for Pygame.
 
 If you already have Python and SDL dependencies installed you can instead run:
 
