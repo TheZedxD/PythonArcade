@@ -177,7 +177,9 @@ class WyrmGame(State):
             chain.insert(0, (new_x, head_y))
             chain.pop()
 
-    def handle_segment_hit(self, chain_idx: int, seg_idx: int, shooter: int = 1) -> None:
+    def handle_segment_hit(
+        self, chain_idx: int, seg_idx: int, shooter: int = 1
+    ) -> None:
         chain = self.wyrms[chain_idx]
         hit_pos = chain[seg_idx]
         if seg_idx == 0:
@@ -220,7 +222,7 @@ class WyrmGame(State):
     def _update_speed(self) -> None:
         total = self.score1 + self.score2
         level = total // 500
-        self.move_delay = max(0.05, MOVE_DELAY * (0.9 ** level))
+        self.move_delay = max(0.05, MOVE_DELAY * (0.9**level))
 
     def draw(self) -> None:
         self.screen.fill((0, 0, 0))
