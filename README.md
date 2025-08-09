@@ -32,5 +32,6 @@ Currently included:
 - TETROID – Matrix-themed Tetris clone with falling code backdrop and
   persistent high score tracking.
 - Wyrm – Centipede-like shooter with splitting segments and rune blocks.
+- Virus – Matrix-themed Dr. Mario-style pill matcher.
 
 Contributions and new mini-games are welcome!

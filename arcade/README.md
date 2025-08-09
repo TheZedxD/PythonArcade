@@ -39,6 +39,8 @@ menu lets you switch window mode and adjust master volume. Changes persist to
 * **Collect Dots** – move the square to grab randomly spawning dots.
 * **TETROID** – a Matrix-themed Tetris clone with falling code backdrop and
   persistent high score tracking.
+* **Wyrm** – Centipede-like shooter with splitting segments and rune blocks.
+* **Virus** – Dr. Mario-inspired pill matcher dressed in Matrix aesthetics.
 
 ## Adding games
 
