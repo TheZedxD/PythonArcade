@@ -64,6 +64,11 @@ class TetroidState(State):
         self.font = pygame.font.SysFont("Courier", 24)
         self.big_font = pygame.font.SysFont("Courier", 32)
         self.rain_font = pygame.font.SysFont("Courier", 20)
+        self.rain_chars = string.ascii_letters + string.digits
+        self.rain_surfaces = {
+            ch: self.rain_font.render(ch, True, (0, 155, 0))
+            for ch in self.rain_chars
+        }
         self.normal_color = (0, 155, 0)
         self.highlight_color = (0, 255, 0)
         self.bg_color = (0, 0, 0)
@@ -93,13 +98,15 @@ class TetroidState(State):
         self.hs_data = load_json(HS_PATH, {"highscore": 0, "plays": 0, "last_played": None})
         self.high_score = self.hs_data.get("highscore", 0)
         width, height = self.screen.get_size()
+        max_glyphs = 80 if width >= 800 else 40
         self.rain_glyphs = []
-        for _ in range(80):
+        for _ in range(max_glyphs):
             x = random.randrange(0, width)
             y = random.randrange(-height, 0)
             speed = random.uniform(50, 150)
-            char = random.choice(string.ascii_letters + string.digits)
+            char = random.choice(self.rain_chars)
             self.rain_glyphs.append([x, y, speed, char])
+        self.overlay = pygame.Surface(self.screen.get_size(), pygame.SRCALPHA)
         # Initialize first pieces for the board(s)
         self.spawn_piece(self.board1)
         if self.board2:
@@ -393,7 +400,7 @@ class TetroidState(State):
         self.screen.fill(self.bg_color)
         width, height = self.screen.get_size()
         for x, y, _, char in self.rain_glyphs:
-            glyph = self.rain_font.render(char, True, self.normal_color)
+            glyph = self.rain_surfaces[char]
             self.screen.blit(glyph, (x, y))
 
         boards = [self.board1]
@@ -449,9 +456,8 @@ class TetroidState(State):
                 self.screen.blit(text1, rect1)
                 self.screen.blit(text2, rect2)
         elif self.state == "pause":
-            overlay = pygame.Surface(self.screen.get_size(), pygame.SRCALPHA)
-            overlay.fill((0, 0, 0, 200))
-            self.screen.blit(overlay, (0, 0))
+            self.overlay.fill((0, 0, 0, 200))
+            self.screen.blit(self.overlay, (0, 0))
             for i, option in enumerate(self.pause_options):
                 color = self.highlight_color if i == self.pause_index else self.normal_color
                 prefix = "> " if i == self.pause_index else "  "
@@ -459,9 +465,8 @@ class TetroidState(State):
                 rect = text.get_rect(center=(width // 2, height // 3 + i * 40))
                 self.screen.blit(text, rect)
         elif self.state == "gameover":
-            overlay = pygame.Surface(self.screen.get_size(), pygame.SRCALPHA)
-            overlay.fill((0, 0, 0, 200))
-            self.screen.blit(overlay, (0, 0))
+            self.overlay.fill((0, 0, 0, 200))
+            self.screen.blit(self.overlay, (0, 0))
             text1 = self.big_font.render("GAME OVER", True, self.highlight_color)
             text2 = self.font.render("Press any key", True, self.highlight_color)
             rect1 = text1.get_rect(center=(width // 2, height // 3))

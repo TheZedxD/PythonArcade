@@ -29,6 +29,7 @@ class WyrmGame(State):
         self.shot_sound: pygame.mixer.Sound | None = None
         self.grid_w = 0
         self.grid_h = 0
+        self.font: pygame.font.Font | None = None
 
     def startup(self, screen: pygame.Surface, num_players: int = 1) -> None:
         super().startup(screen, num_players)
@@ -36,6 +37,7 @@ class WyrmGame(State):
         self.grid_w = width // GRID_SIZE
         self.grid_h = height // GRID_SIZE
         self.player = [self.grid_w // 2, int(self.grid_h * 0.8)]
+        self.font = pygame.font.SysFont("Courier", 20)
         base = os.path.join(os.path.dirname(__file__), "assets")
         try:
             self.segment_img = pygame.image.load(
@@ -177,9 +179,9 @@ class WyrmGame(State):
                 (0, 255, 0),
                 (x * GRID_SIZE + GRID_SIZE // 4, y * GRID_SIZE, GRID_SIZE // 2, GRID_SIZE // 2),
             )
-        font = pygame.font.SysFont("Courier", 20)
-        text = font.render(f"Score: {self.score}", True, (0, 255, 0))
-        self.screen.blit(text, (5, 5))
+        if self.font:
+            text = self.font.render(f"Score: {self.score}", True, (0, 255, 0))
+            self.screen.blit(text, (5, 5))
 
     def game_over(self, name: str) -> None:
         from arcade.high_scores import save_score

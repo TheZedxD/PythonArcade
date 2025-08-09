@@ -18,6 +18,7 @@ class MainMenuState(State):
         self.bg_color = (0, 0, 0)
         self.rain_glyphs = []
         self.rain_chars = string.ascii_letters + string.digits
+        self.rain_surfaces = {}
         self.phase = "game"
         self.selected_game = None
 
@@ -27,6 +28,10 @@ class MainMenuState(State):
         self.font = pygame.font.SysFont("Courier", 32)
         self.title_font = pygame.font.SysFont("Courier", 48, bold=True)
         self.rain_font = pygame.font.SysFont("Courier", 20)
+        self.rain_surfaces = {
+            ch: self.rain_font.render(ch, True, self.normal_color)
+            for ch in self.rain_chars
+        }
         base_dir = os.path.join(os.path.dirname(__file__), "games")
         entries = []
         for name in os.listdir(base_dir):
@@ -46,8 +51,9 @@ class MainMenuState(State):
         self.selected_game = None
 
         width, height = self.screen.get_size()
+        max_glyphs = 100 if width >= 800 else 50
         self.rain_glyphs = []
-        for _ in range(100):
+        for _ in range(max_glyphs):
             x = random.randrange(0, width)
             y = random.randrange(-height, 0)
             speed = random.uniform(50, 150)
@@ -141,7 +147,7 @@ class MainMenuState(State):
         width, height = self.screen.get_size()
 
         for x, y, _, char in self.rain_glyphs:
-            glyph = self.rain_font.render(char, True, self.normal_color)
+            glyph = self.rain_surfaces[char]
             self.screen.blit(glyph, (x, y))
 
         t = pygame.time.get_ticks() / 300.0
