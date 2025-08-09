@@ -25,8 +25,8 @@ class MainMenuState(State):
         self.title_font = pygame.font.SysFont("Courier", 48, bold=True)
         self.rain_font = pygame.font.SysFont("Courier", 20)
         base_dir = os.path.join(os.path.dirname(__file__), "games")
-        self.options = []
-        for name in sorted(os.listdir(base_dir)):
+        entries = []
+        for name in os.listdir(base_dir):
             path = os.path.join(base_dir, name)
             module_file = os.path.join(path, "game.py")
             if os.path.isdir(path) and os.path.isfile(module_file):
@@ -34,7 +34,8 @@ class MainMenuState(State):
                 if display.startswith("game_"):
                     display = display[5:]
                 display = display.replace("_", " ").upper()
-                self.options.append((name, display))
+                entries.append((name, display))
+        self.options = sorted(entries, key=lambda x: x[1])
         self.options.append(("Settings", "SETTINGS"))
         self.options.append(("Quit", "QUIT"))
         self.index = 0
