@@ -88,9 +88,7 @@ class TetroidState(State):
         self.score = 0
         self.score2 = 0
         if self.num_players == 2:
-            self.board2 = self._create_board(
-                self.playfield_x + playfield_width + gap
-            )
+            self.board2 = self._create_board(self.playfield_x + playfield_width + gap)
             self.score2 = 0
         self.state = "instructions"
         self.pause_options = ["Resume", "Volume -", "Volume +", "Fullscreen", "Quit"]
