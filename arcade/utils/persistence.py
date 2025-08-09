@@ -1,4 +1,5 @@
 import json
+import copy
 from pathlib import Path
 from typing import Any
 
@@ -11,9 +12,10 @@ def save_json(path: str, data: Any) -> None:
 
 
 def load_json(path: str, default: Any) -> Any:
-    """Load JSON data from *path* or return *default* if missing or invalid."""
+    """Load JSON data from *path* or return a copy of *default* if missing or invalid."""
     try:
         with open(path, "r", encoding="utf-8") as f:
             return json.load(f)
     except Exception:
-        return default
+        # Return a deep copy to avoid callers mutating the provided default object
+        return copy.deepcopy(default)
