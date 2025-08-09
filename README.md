@@ -29,5 +29,6 @@ Currently included:
 - Collect Dots – move the square to grab randomly spawning dots.
 - TETROID – Matrix-themed Tetris clone with falling code backdrop and
   persistent high score tracking.
+- Wyrm – Centipede-like shooter with splitting segments and rune blocks.
 
 Contributions and new mini-games are welcome!
