@@ -1,9 +1,32 @@
 import math
+from pathlib import Path
+
 import pygame
+
 from state import State
+from utils.persistence import load_json, save_json
+
 from .engine.track import create_demo_track
 from .engine.renderer import Renderer
 from .engine.physics import Car, Ghost
+
+BASE_PATH = Path(__file__).resolve().parents[2]
+SAVE_PATH = BASE_PATH / "save" / "kart8.json"
+DEFAULT_DATA = {
+    "settings": {
+        "difficulty": 1.0,
+        "layout": "vertical",
+        "fps": 60,
+        "volume": 1.0,
+        "show_help": True,
+    },
+    "times": {
+        "1p": {"last": [], "best": []},
+        "2p": {"last": [], "best": []},
+    },
+}
+
+NUM_LAPS = 2
 
 
 class KartGame(State):
@@ -13,16 +36,28 @@ class KartGame(State):
         if not items:
             self.track.items = []
         self.items_enabled = items
+        self.data = load_json(str(SAVE_PATH), DEFAULT_DATA)
+        settings = self.data.get("settings", {})
+        self.difficulty = settings.get("difficulty", 1.0)
+        self.layout = settings.get("layout", "vertical")
+        self.fps_cap = settings.get("fps", 60)
+        self.volume = settings.get("volume", 1.0)
+        self.show_help = settings.get("show_help", True)
+        if pygame.mixer.get_init():
+            pygame.mixer.music.set_volume(self.volume)
+
         self.players = [Car(self.track)]
         if num_players > 1:
             self.players.append(Car(self.track, color=(255, 255, 0)))
             self.ghost = None
         else:
-            self.ghost = Ghost(self.track)
+            self.ghost = Ghost(self.track, self.difficulty)
         self.laps = [0 for _ in self.players]
+        self.lap_times = [[] for _ in self.players]
+        self.timers = [0.0 for _ in self.players]
         self.font = pygame.font.SysFont("Courier", 20)
         self.hud_color = (0, 255, 0)
-        self.layout = "vertical"  # top/bottom by default
+        self.create_help_surface()
         self.create_cameras()
         self.build_minimap()
 
@@ -79,15 +114,64 @@ class KartGame(State):
         self.minimap_template = surf
         self.map_step = step
 
+    def create_help_surface(self):
+        lines = [
+            "Controls:",
+            "P1 WASD + Shift boost",
+            "P2 Arrows + RCtrl boost",
+            "Tab toggle split",
+            "Esc to menu",
+        ]
+        font = pygame.font.SysFont("Courier", 18)
+        width = max(font.size(l)[0] for l in lines) + 20
+        height = len(lines) * 24 + 10
+        surf = pygame.Surface((width, height))
+        surf.fill((0, 0, 0))
+        surf.set_alpha(180)
+        for i, line in enumerate(lines):
+            text = font.render(line, True, (0, 255, 0))
+            surf.blit(text, (10, 5 + i * 24))
+        self.help_surface = surf
+
     # ---- input ---------------------------------------------------------
     def handle_keyboard(self, event):
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_ESCAPE:
+            if self.show_help:
+                self.show_help = False
+                self.data["settings"]["show_help"] = False
+                save_json(str(SAVE_PATH), self.data)
+            elif event.key == pygame.K_ESCAPE:
                 self.done = True
                 self.next = "menu"
             elif event.key == pygame.K_TAB and self.num_players > 1:
                 self.layout = "horizontal" if self.layout == "vertical" else "vertical"
+                self.data["settings"]["layout"] = self.layout
+                save_json(str(SAVE_PATH), self.data)
                 self.create_cameras()
+            elif event.key == pygame.K_F3:
+                self.fps_cap = 30 if self.fps_cap == 60 else 60
+                self.data["settings"]["fps"] = self.fps_cap
+                save_json(str(SAVE_PATH), self.data)
+            elif event.key == pygame.K_F4:
+                cycle = [0.8, 1.0, 1.2]
+                idx = cycle.index(self.difficulty) if self.difficulty in cycle else 1
+                self.difficulty = cycle[(idx + 1) % len(cycle)]
+                if self.ghost:
+                    self.ghost.difficulty = self.difficulty
+                self.data["settings"]["difficulty"] = self.difficulty
+                save_json(str(SAVE_PATH), self.data)
+            elif event.key == pygame.K_MINUS:
+                self.volume = max(0.0, round(self.volume - 0.1, 2))
+                if pygame.mixer.get_init():
+                    pygame.mixer.music.set_volume(self.volume)
+                self.data["settings"]["volume"] = self.volume
+                save_json(str(SAVE_PATH), self.data)
+            elif event.key == pygame.K_EQUALS:
+                self.volume = min(1.0, round(self.volume + 0.1, 2))
+                if pygame.mixer.get_init():
+                    pygame.mixer.music.set_volume(self.volume)
+                self.data["settings"]["volume"] = self.volume
+                save_json(str(SAVE_PATH), self.data)
 
     # ---- game logic ----------------------------------------------------
     def update(self, dt):
@@ -102,8 +186,13 @@ class KartGame(State):
         boost1 = keys[pygame.K_LSHIFT]
         prev_z1 = self.players[0].z
         self.players[0].update(dt, controls1, boost1)
+        self.timers[0] += dt
         if prev_z1 > self.players[0].z:
             self.laps[0] += 1
+            self.lap_times[0].append(self.timers[0])
+            self.timers[0] = 0.0
+            if len(self.lap_times[0]) >= NUM_LAPS:
+                self.record_time(0)
 
         if self.num_players > 1:
             controls2 = {
@@ -115,8 +204,13 @@ class KartGame(State):
             boost2 = keys[pygame.K_RCTRL]
             prev_z2 = self.players[1].z
             self.players[1].update(dt, controls2, boost2)
+            self.timers[1] += dt
             if prev_z2 > self.players[1].z:
                 self.laps[1] += 1
+                self.lap_times[1].append(self.timers[1])
+                self.timers[1] = 0.0
+                if len(self.lap_times[1]) >= NUM_LAPS:
+                    self.record_time(1)
         elif self.ghost:
             self.ghost.update(dt, self.players[0].z)
 
@@ -139,7 +233,7 @@ class KartGame(State):
                         elif t == "shell":
                             p.speed *= 0.5
                             item["active"] = False
-            self.track.items = [i for i in self.track.items if i.get("active", True)]
+        self.track.items = [i for i in self.track.items if i.get("active", True)]
 
     # ---- drawing -------------------------------------------------------
     def draw_hud(self, surface, player, lap):
@@ -152,6 +246,15 @@ class KartGame(State):
             idx = int(player.z / self.map_step) % len(self.map_points)
             pygame.draw.circle(m, player.color, self.map_points[idx], 2)
             surface.blit(m, (surface.get_width() - m.get_width() - 5, 5))
+
+    def record_time(self, player_index: int):
+        mode = "1p" if self.num_players == 1 else "2p"
+        times = self.data.setdefault("times", {}).setdefault(mode, {"last": [], "best": []})
+        times["last"] = self.lap_times[player_index][:]
+        total = sum(self.lap_times[player_index])
+        best = times.get("best", []) + [total]
+        times["best"] = sorted(best)[:5]
+        save_json(str(SAVE_PATH), self.data)
 
     def draw(self):
         self.screen.fill((0, 0, 0))
@@ -175,6 +278,10 @@ class KartGame(State):
                 w = self.screen.get_width() // 2
                 self.screen.blit(self.cameras[0], (0, 0))
                 self.screen.blit(self.cameras[1], (w, 0))
+
+        if self.show_help and self.help_surface:
+            rect = self.help_surface.get_rect(center=self.screen.get_rect().center)
+            self.screen.blit(self.help_surface, rect)
 
 
 # expose Game class for loader

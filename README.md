@@ -33,5 +33,7 @@ Currently included:
   persistent high score tracking.
 - Wyrm – Centipede-like shooter with splitting segments and rune blocks.
 - Virus – Matrix-themed Dr. Mario-style pill matcher.
+- Kart 8-Bit – retro-inspired split-screen kart racer. WASD or arrow keys to steer,
+  Shift/Right Ctrl to boost, Tab to swap splitscreen.
 
 Contributions and new mini-games are welcome!
