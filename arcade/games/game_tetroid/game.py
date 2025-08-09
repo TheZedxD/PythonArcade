@@ -72,7 +72,14 @@ class TetroidState(State):
         self.highlight_color = (0, 255, 0)
         self.bg_color = (0, 0, 0)
         self.cell = 24
-        self.playfield_x = 50
+        playfield_width = GRID_WIDTH * self.cell
+        gap = 100
+        screen_width, _ = self.screen.get_size()
+        if self.num_players == 2:
+            total_width = playfield_width * 2 + gap
+            self.playfield_x = (screen_width - total_width) // 2
+        else:
+            self.playfield_x = (screen_width - playfield_width) // 2
         self.playfield_y = 20
         # Boards for each player.  board1 is always present; board2 is
         # created only for two-player games.
@@ -81,8 +88,9 @@ class TetroidState(State):
         self.score = 0
         self.score2 = 0
         if self.num_players == 2:
-            gap = GRID_WIDTH * self.cell + 100
-            self.board2 = self._create_board(self.playfield_x + gap)
+            self.board2 = self._create_board(
+                self.playfield_x + playfield_width + gap
+            )
             self.score2 = 0
         self.state = "instructions"
         self.pause_options = ["Resume", "Volume -", "Volume +", "Fullscreen", "Quit"]
