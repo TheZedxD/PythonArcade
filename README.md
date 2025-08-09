@@ -2,27 +2,35 @@
 
 A collection of simple Pygame-based games packaged under an arcade shell.
 
-## Installation
+## Quick Start
 
-From the `arcade` directory you can set up a local virtual environment and
-install dependencies:
+1. Clone this repository.
+2. Install dependencies and create the virtual environment:
 
-```sh
-cd arcade
-./install.sh   # or install.bat on Windows
-```
+   ```sh
+   # Linux
+   bash scripts/install_linux.sh
 
-This will create a `venv` and generate a `run.sh` (or `run.bat`) launcher. On
-Raspberry Pi OS the script detects the platform and reminds you to ensure SDL
-drivers are installed. A graphical desktop environment is required for Pygame.
+   # Windows (Command Prompt)
+   scripts\install_windows.bat
+   ```
 
-If you already have Python and SDL dependencies installed you can instead run:
+3. Launch the arcade:
 
-```sh
-cd arcade
-python -m pip install -r requirements.txt
-python main.py
-```
+   ```sh
+   # Linux
+   bash scripts/run_linux.sh
+
+   # Windows
+   scripts\run_windows.bat
+   ```
+
+## Troubleshooting
+
+- Ensure Python 3.10 or newer is installed and on your `PATH`.
+- On Linux a graphical environment is required. If you see `pygame.error: No available video device`,
+  install SDL libraries or run with `SDL_VIDEODRIVER=dummy`.
+- Updating graphics drivers often fixes window creation or performance issues.
 
 ## Games
 
