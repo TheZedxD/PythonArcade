@@ -18,6 +18,8 @@ class Renderer:
             "oil": self._load_image(assets / "oil.png"),
             "shell": self._load_image(assets / "shell.png"),
         }
+        self.enemy_cache = {}
+        self.item_cache = {k: {} for k in self.item_imgs}
 
     @staticmethod
     def _load_image(path):
@@ -101,7 +103,11 @@ class Renderer:
         w = int(20 * scale / self.scale)
         h = int(40 * scale / self.scale)
         if self.enemy_img:
-            img = pygame.transform.scale(self.enemy_img, (w, h))
+            key = (w, h)
+            img = self.enemy_cache.get(key)
+            if img is None:
+                img = pygame.transform.scale(self.enemy_img, (w, h)).convert_alpha()
+                self.enemy_cache[key] = img
             rect = img.get_rect(midbottom=(int(sx), int(sy)))
             self.screen.blit(img, rect)
         else:
@@ -131,9 +137,13 @@ class Renderer:
             size = max(5, int(20 * scale / self.scale))
             img = self.item_imgs.get(item["type"])
             if img:
-                img = pygame.transform.scale(img, (size, size))
-                rect = img.get_rect(midbottom=(int(sx), int(sy)))
-                self.screen.blit(img, rect)
+                cache = self.item_cache[item["type"]]
+                scaled = cache.get(size)
+                if scaled is None:
+                    scaled = pygame.transform.scale(img, (size, size)).convert_alpha()
+                    cache[size] = scaled
+                rect = scaled.get_rect(midbottom=(int(sx), int(sy)))
+                self.screen.blit(scaled, rect)
             else:
                 rect = pygame.Rect(int(sx) - size // 2, int(sy) - size, size, size)
                 pygame.draw.rect(
