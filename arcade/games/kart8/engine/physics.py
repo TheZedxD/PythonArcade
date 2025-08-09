@@ -8,6 +8,7 @@ class Car:
     x: float = 0.0  # lateral position (-1..1 roughly)
     speed: float = 0.0
     color: tuple = (0, 0, 255)
+    oil_timer: float = 0.0
 
     max_speed: float = 220.0
     accel: float = 120.0
@@ -15,6 +16,11 @@ class Car:
     friction: float = 40.0
 
     def update(self, dt, controls, boost=False):
+        if self.oil_timer > 0:
+            self.oil_timer = max(0.0, self.oil_timer - dt)
+            grip = 0.3
+        else:
+            grip = 1.0
         if controls.get('accelerate'):
             self.speed += self.accel * dt * (1.5 if boost else 1.0)
         elif controls.get('brake'):
@@ -28,9 +34,9 @@ class Car:
 
         curve = self.track.curvature_at(self.z)
         if controls.get('left'):
-            self.x -= 1.5 * dt * (self.speed / self.max_speed)
+            self.x -= 1.5 * dt * (self.speed / self.max_speed) * grip
         if controls.get('right'):
-            self.x += 1.5 * dt * (self.speed / self.max_speed)
+            self.x += 1.5 * dt * (self.speed / self.max_speed) * grip
         # push car to outside of curve
         self.x -= curve * 0.5 * (self.speed / self.max_speed)
         self.x = max(-3.0, min(self.x, 3.0))

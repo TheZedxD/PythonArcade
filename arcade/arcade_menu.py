@@ -26,6 +26,7 @@ class MainMenuState(State):
     def startup(self, screen, num_players: int = 1):
         super().startup(screen, num_players)
         self.num_players = 1
+        self.game_options = {}
         self.font = pygame.font.SysFont("Courier", 32)
         self.title_font = pygame.font.SysFont("Courier", 48, bold=True)
         self.rain_font = pygame.font.SysFont("Courier", 20)
@@ -93,14 +94,31 @@ class MainMenuState(State):
             if event.type == pygame.KEYDOWN:
                 if event.key in (pygame.K_1, pygame.K_KP1):
                     self.num_players = 1
-                    self.next = self.selected_game
-                    self.done = True
                 elif event.key in (pygame.K_2, pygame.K_KP2):
                     self.num_players = 2
+                elif event.key == pygame.K_ESCAPE:
+                    self.phase = "game"
+                    return
+                else:
+                    return
+                if self.selected_game == "kart8":
+                    self.phase = "items"
+                else:
+                    self.game_options = {}
+                    self.next = self.selected_game
+                    self.done = True
+        elif self.phase == "items":
+            if event.type == pygame.KEYDOWN:
+                if event.key in (pygame.K_y, pygame.K_1, pygame.K_KP1):
+                    self.game_options = {"items": True}
+                    self.next = self.selected_game
+                    self.done = True
+                elif event.key in (pygame.K_n, pygame.K_2, pygame.K_KP2):
+                    self.game_options = {"items": False}
                     self.next = self.selected_game
                     self.done = True
                 elif event.key == pygame.K_ESCAPE:
-                    self.phase = "game"
+                    self.phase = "players"
 
     def handle_gamepad(self, event):
         if self.phase == "game":
@@ -133,14 +151,31 @@ class MainMenuState(State):
             if event.type == pygame.JOYBUTTONDOWN:
                 if event.button == 0:
                     self.num_players = 1
+                elif event.button == 1:
+                    self.num_players = 2
+                elif event.button in (7, 9):
+                    self.phase = "game"
+                    return
+                else:
+                    return
+                if self.selected_game == "kart8":
+                    self.phase = "items"
+                else:
+                    self.game_options = {}
+                    self.next = self.selected_game
+                    self.done = True
+        elif self.phase == "items":
+            if event.type == pygame.JOYBUTTONDOWN:
+                if event.button == 0:
+                    self.game_options = {"items": True}
                     self.next = self.selected_game
                     self.done = True
                 elif event.button == 1:
-                    self.num_players = 2
+                    self.game_options = {"items": False}
                     self.next = self.selected_game
                     self.done = True
                 elif event.button in (7, 9):
-                    self.phase = "game"
+                    self.phase = "players"
 
     def update(self, dt):
         width, height = self.screen.get_size()
@@ -176,7 +211,11 @@ class MainMenuState(State):
                 text = self.font.render(prefix + label, True, color)
                 rect = text.get_rect(center=(width // 2, height // 3 + i * 40))
                 self.screen.blit(text, rect)
-        else:
+        elif self.phase == "players":
             prompt = self.font.render("1 or 2 PLAYERS?", True, self.highlight_color)
+            rect = prompt.get_rect(center=(width // 2, height // 2))
+            self.screen.blit(prompt, rect)
+        else:
+            prompt = self.font.render("ITEMS ON? Y/N", True, self.highlight_color)
             rect = prompt.get_rect(center=(width // 2, height // 2))
             self.screen.blit(prompt, rect)

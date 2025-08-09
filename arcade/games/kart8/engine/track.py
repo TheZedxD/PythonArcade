@@ -17,6 +17,7 @@ class Track:
         self.cumulative = []
         self.total_length = 0.0
         self.billboards = []  # list of (z, x, color)
+        self.items = []  # list of dicts with keys type,z,x,speed etc
 
     def add(self, seg: Segment):
         self.segments.append(seg)
@@ -69,4 +70,12 @@ def create_demo_track():
         x = random.choice([-2.0, 2.0])
         color = random.choice(colors)
         track.billboards.append((z, x, color))
+
+    # place a few items along the track
+    track.items = []
+    for i in range(3):
+        track.items.append({"type": "boost", "z": 30 + i * 80, "x": 0.0})
+    for i in range(2):
+        track.items.append({"type": "oil", "z": 70 + i * 120, "x": 1.5})
+    track.items.append({"type": "shell", "z": 150, "x": -0.5, "speed": 90.0, "active": True})
     return track

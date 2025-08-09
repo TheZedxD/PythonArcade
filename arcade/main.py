@@ -104,7 +104,9 @@ def main():
                 for state in states.values():
                     state.screen = screen
             if next_state:
-                next_state.startup(screen, current_state.num_players)
+                # pass through any options the current state collected
+                opts = getattr(current_state, "game_options", {})
+                next_state.startup(screen, current_state.num_players, **opts)
                 current_state = next_state
 
     pygame.quit()
