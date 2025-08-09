@@ -70,12 +70,16 @@ class TetroidState(State):
         self.cell = 24
         self.playfield_x = 50
         self.playfield_y = 20
-        self.grid = [[None for _ in range(GRID_WIDTH)] for _ in range(GRID_HEIGHT)]
+        # Boards for each player.  board1 is always present; board2 is
+        # created only for two-player games.
+        self.board1 = self._create_board(self.playfield_x)
+        self.board2 = None
         self.score = 0
-        self.lines = 0
-        self.level = 1
-        self.drop_delay = 0.8
-        self.drop_timer = 0
+        self.score2 = 0
+        if self.num_players == 2:
+            gap = GRID_WIDTH * self.cell + 100
+            self.board2 = self._create_board(self.playfield_x + gap)
+            self.score2 = 0
         self.state = "instructions"
         self.pause_options = ["Resume", "Volume -", "Volume +", "Fullscreen", "Quit"]
         self.pause_index = 0
@@ -96,64 +100,89 @@ class TetroidState(State):
             speed = random.uniform(50, 150)
             char = random.choice(string.ascii_letters + string.digits)
             self.rain_glyphs.append([x, y, speed, char])
-        self.next_piece = self.random_piece()
-        self.spawn_piece()
+        # Initialize first pieces for the board(s)
+        self.spawn_piece(self.board1)
+        if self.board2:
+            self.spawn_piece(self.board2)
 
     # Piece management -------------------------------------------------
     def random_piece(self):
         shape = random.choice(list(TETROMINOES.keys()))
         return {"shape": shape, "rot": 0, "x": GRID_WIDTH // 2 - 2, "y": 0}
+        
+    def _create_board(self, playfield_x):
+        board = {
+            "playfield_x": playfield_x,
+            "playfield_y": self.playfield_y,
+            "grid": [[None for _ in range(GRID_WIDTH)] for _ in range(GRID_HEIGHT)],
+            "score": 0,
+            "lines": 0,
+            "level": 1,
+            "drop_delay": 0.8,
+            "drop_timer": 0,
+            "next_piece": self.random_piece(),
+            "current": None,
+            "gameover": False,
+        }
+        return board
 
-    def spawn_piece(self):
-        self.current = self.next_piece
-        self.current["x"] = GRID_WIDTH // 2 - 2
-        self.current["y"] = 0
-        self.current["rot"] = 0
-        self.next_piece = self.random_piece()
-        if self.collides(self.current, 0, 0):
-            self.state = "gameover"
-            self.update_stats()
+    def spawn_piece(self, board):
+        board["current"] = board["next_piece"]
+        board["current"]["x"] = GRID_WIDTH // 2 - 2
+        board["current"]["y"] = 0
+        board["current"]["rot"] = 0
+        board["next_piece"] = self.random_piece()
+        if self.collides(board, board["current"], 0, 0):
+            board["gameover"] = True
+            if self.num_players == 1 or (self.board1["gameover"] and (not self.board2 or self.board2["gameover"])):
+                self.state = "gameover"
+                self.update_stats()
 
-    def rotate(self):
-        old_rot = self.current["rot"]
-        self.current["rot"] = (self.current["rot"] + 1) % len(TETROMINOES[self.current["shape"]])
-        if self.collides(self.current, 0, 0):
+    def rotate(self, board):
+        piece = board["current"]
+        old_rot = piece["rot"]
+        piece["rot"] = (piece["rot"] + 1) % len(TETROMINOES[piece["shape"]])
+        if self.collides(board, piece, 0, 0):
             # try simple wall kicks
             for dx in (-1, 1, -2, 2):
-                if not self.collides(self.current, dx, 0):
-                    self.current["x"] += dx
+                if not self.collides(board, piece, dx, 0):
+                    piece["x"] += dx
                     return
-            self.current["rot"] = old_rot
+            piece["rot"] = old_rot
 
-    def collides(self, piece, dx, dy):
+    def collides(self, board, piece, dx, dy):
+        grid = board["grid"]
         for x, y in TETROMINOES[piece["shape"]][piece["rot"]]:
             px = piece["x"] + x + dx
             py = piece["y"] + y + dy
             if px < 0 or px >= GRID_WIDTH or py < 0 or py >= GRID_HEIGHT:
                 return True
-            if self.grid[py][px]:
+            if grid[py][px]:
                 return True
         return False
 
-    def lock_piece(self):
-        for x, y in TETROMINOES[self.current["shape"]][self.current["rot"]]:
-            px = self.current["x"] + x
-            py = self.current["y"] + y
+    def lock_piece(self, board):
+        grid = board["grid"]
+        piece = board["current"]
+        for x, y in TETROMINOES[piece["shape"]][piece["rot"]]:
+            px = piece["x"] + x
+            py = piece["y"] + y
             if 0 <= px < GRID_WIDTH and 0 <= py < GRID_HEIGHT:
-                self.grid[py][px] = self.highlight_color
+                grid[py][px] = self.highlight_color
 
-    def clear_lines(self):
-        full = [i for i, row in enumerate(self.grid) if all(row)]
+    def clear_lines(self, board):
+        grid = board["grid"]
+        full = [i for i, row in enumerate(grid) if all(row)]
         for i in full:
-            del self.grid[i]
-            self.grid.insert(0, [None for _ in range(GRID_WIDTH)])
+            del grid[i]
+            grid.insert(0, [None for _ in range(GRID_WIDTH)])
         if full:
             lines = len(full)
-            self.score += SCORES.get(lines, lines * 100)
-            self.lines += lines
-            if self.lines // 10 + 1 > self.level:
-                self.level += 1
-                self.drop_delay = max(0.1, self.drop_delay * 0.8)
+            board["score"] += SCORES.get(lines, lines * 100)
+            board["lines"] += lines
+            if board["lines"] // 10 + 1 > board["level"]:
+                board["level"] += 1
+                board["drop_delay"] = max(0.1, board["drop_delay"] * 0.8)
         return len(full)
 
     # Input and state --------------------------------------------------
@@ -163,20 +192,35 @@ class TetroidState(State):
                 self.state = "play"
         elif self.state == "play":
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_LEFT and not self.collides(self.current, -1, 0):
-                    self.current["x"] -= 1
-                elif event.key == pygame.K_RIGHT and not self.collides(self.current, 1, 0):
-                    self.current["x"] += 1
-                elif event.key == pygame.K_DOWN and not self.collides(self.current, 0, 1):
-                    self.current["y"] += 1
-                elif event.key == pygame.K_UP:
-                    self.rotate()
-                elif event.key == pygame.K_SPACE:
-                    while not self.collides(self.current, 0, 1):
-                        self.current["y"] += 1
-                elif event.key == pygame.K_ESCAPE:
+                if event.key == pygame.K_ESCAPE:
                     self.state = "pause"
                     self.pause_index = 0
+                # Player 1 controls
+                if not self.board1["gameover"]:
+                    if event.key == pygame.K_LEFT and not self.collides(self.board1, self.board1["current"], -1, 0):
+                        self.board1["current"]["x"] -= 1
+                    elif event.key == pygame.K_RIGHT and not self.collides(self.board1, self.board1["current"], 1, 0):
+                        self.board1["current"]["x"] += 1
+                    elif event.key == pygame.K_DOWN and not self.collides(self.board1, self.board1["current"], 0, 1):
+                        self.board1["current"]["y"] += 1
+                    elif event.key == pygame.K_UP:
+                        self.rotate(self.board1)
+                    elif event.key == pygame.K_SPACE:
+                        while not self.collides(self.board1, self.board1["current"], 0, 1):
+                            self.board1["current"]["y"] += 1
+                # Player 2 controls
+                if self.num_players == 2 and self.board2 and not self.board2["gameover"]:
+                    if event.key == pygame.K_a and not self.collides(self.board2, self.board2["current"], -1, 0):
+                        self.board2["current"]["x"] -= 1
+                    elif event.key == pygame.K_d and not self.collides(self.board2, self.board2["current"], 1, 0):
+                        self.board2["current"]["x"] += 1
+                    elif event.key == pygame.K_s and not self.collides(self.board2, self.board2["current"], 0, 1):
+                        self.board2["current"]["y"] += 1
+                    elif event.key == pygame.K_w:
+                        self.rotate(self.board2)
+                    elif event.key == pygame.K_f:
+                        while not self.collides(self.board2, self.board2["current"], 0, 1):
+                            self.board2["current"]["y"] += 1
         elif self.state == "pause":
             if event.type == pygame.KEYDOWN:
                 if event.key in (pygame.K_UP, pygame.K_w):
@@ -219,32 +263,32 @@ class TetroidState(State):
         elif self.state == "play":
             if event.type == pygame.JOYBUTTONDOWN:
                 if event.button == 0:
-                    self.rotate()
+                    self.rotate(self.board1)
                 elif event.button == 1:
-                    while not self.collides(self.current, 0, 1):
-                        self.current["y"] += 1
+                    while not self.collides(self.board1, self.board1["current"], 0, 1):
+                        self.board1["current"]["y"] += 1
                 elif event.button in (7, 9):
                     self.state = "pause"
                     self.pause_index = 0
             elif event.type == pygame.JOYAXISMOTION:
                 if event.axis == 0:
-                    if event.value < -0.5 and not self.collides(self.current, -1, 0):
-                        self.current["x"] -= 1
-                    elif event.value > 0.5 and not self.collides(self.current, 1, 0):
-                        self.current["x"] += 1
+                    if event.value < -0.5 and not self.collides(self.board1, self.board1["current"], -1, 0):
+                        self.board1["current"]["x"] -= 1
+                    elif event.value > 0.5 and not self.collides(self.board1, self.board1["current"], 1, 0):
+                        self.board1["current"]["x"] += 1
                 elif event.axis == 1:
-                    if event.value > 0.5 and not self.collides(self.current, 0, 1):
-                        self.current["y"] += 1
+                    if event.value > 0.5 and not self.collides(self.board1, self.board1["current"], 0, 1):
+                        self.board1["current"]["y"] += 1
             elif event.type == pygame.JOYHATMOTION:
                 x, y = event.value
-                if x == -1 and not self.collides(self.current, -1, 0):
-                    self.current["x"] -= 1
-                elif x == 1 and not self.collides(self.current, 1, 0):
-                    self.current["x"] += 1
-                if y == -1 and not self.collides(self.current, 0, 1):
-                    self.current["y"] += 1
+                if x == -1 and not self.collides(self.board1, self.board1["current"], -1, 0):
+                    self.board1["current"]["x"] -= 1
+                elif x == 1 and not self.collides(self.board1, self.board1["current"], 1, 0):
+                    self.board1["current"]["x"] += 1
+                if y == -1 and not self.collides(self.board1, self.board1["current"], 0, 1):
+                    self.board1["current"]["y"] += 1
                 elif y == 1:
-                    self.rotate()
+                    self.rotate(self.board1)
         elif self.state == "pause":
             if event.type in (pygame.JOYAXISMOTION, pygame.JOYHATMOTION):
                 if event.type == pygame.JOYHATMOTION:
@@ -289,8 +333,11 @@ class TetroidState(State):
                 self.next = "menu"
 
     def update_stats(self):
-        if self.score > self.high_score:
-            self.high_score = self.score
+        best = self.board1["score"]
+        if self.board2:
+            best = max(best, self.board2["score"])
+        if best > self.high_score:
+            self.high_score = best
         self.hs_data["highscore"] = self.high_score
         self.hs_data["plays"] = self.hs_data.get("plays", 0) + 1
         self.hs_data["last_played"] = datetime.now().isoformat()
@@ -310,27 +357,37 @@ class TetroidState(State):
                 g[2] = random.uniform(50, 150)
                 g[3] = random.choice(string.ascii_letters + string.digits)
 
-        self.drop_timer += dt
-        if self.drop_timer >= self.drop_delay:
-            self.drop_timer = 0
-            if not self.collides(self.current, 0, 1):
-                self.current["y"] += 1
-            else:
-                self.lock_piece()
-                self.clear_lines()
-                self.spawn_piece()
+        boards = [self.board1]
+        if self.board2:
+            boards.append(self.board2)
+        for board in boards:
+            if board["gameover"]:
+                continue
+            board["drop_timer"] += dt
+            if board["drop_timer"] >= board["drop_delay"]:
+                board["drop_timer"] = 0
+                if not self.collides(board, board["current"], 0, 1):
+                    board["current"]["y"] += 1
+                else:
+                    self.lock_piece(board)
+                    self.clear_lines(board)
+                    self.spawn_piece(board)
+
+        self.score = self.board1["score"]
+        if self.board2:
+            self.score2 = self.board2["score"]
 
     # Drawing ----------------------------------------------------------
-    def draw_cell(self, x, y, color):
-        rect = pygame.Rect(self.playfield_x + x * self.cell,
-                           self.playfield_y + y * self.cell,
+    def draw_cell(self, board, x, y, color):
+        rect = pygame.Rect(board["playfield_x"] + x * self.cell,
+                           board["playfield_y"] + y * self.cell,
                            self.cell, self.cell)
         pygame.draw.rect(self.screen, color, rect)
         pygame.draw.rect(self.screen, self.normal_color, rect, 1)
 
-    def draw_piece(self, piece, color):
+    def draw_piece(self, board, piece, color):
         for x, y in TETROMINOES[piece["shape"]][piece["rot"]]:
-            self.draw_cell(piece["x"] + x, piece["y"] + y, color)
+            self.draw_cell(board, piece["x"] + x, piece["y"] + y, color)
 
     def draw(self):
         self.screen.fill(self.bg_color)
@@ -339,46 +396,58 @@ class TetroidState(State):
             glyph = self.rain_font.render(char, True, self.normal_color)
             self.screen.blit(glyph, (x, y))
 
-        # Playfield border
-        pf_rect = pygame.Rect(self.playfield_x - 4, self.playfield_y - 4,
-                              GRID_WIDTH * self.cell + 8,
-                              GRID_HEIGHT * self.cell + 8)
-        pygame.draw.rect(self.screen, self.normal_color, pf_rect, 2)
+        boards = [self.board1]
+        if self.board2:
+            boards.append(self.board2)
+        for idx, board in enumerate(boards):
+            pf_rect = pygame.Rect(board["playfield_x"] - 4, board["playfield_y"] - 4,
+                                  GRID_WIDTH * self.cell + 8,
+                                  GRID_HEIGHT * self.cell + 8)
+            pygame.draw.rect(self.screen, self.normal_color, pf_rect, 2)
 
-        # Fixed blocks
-        for y in range(GRID_HEIGHT):
-            for x in range(GRID_WIDTH):
-                if self.grid[y][x]:
-                    self.draw_cell(x, y, self.grid[y][x])
+            for y in range(GRID_HEIGHT):
+                for x in range(GRID_WIDTH):
+                    if board["grid"][y][x]:
+                        self.draw_cell(board, x, y, board["grid"][y][x])
 
-        # Current and next pieces
-        if self.state in ("play", "pause"):
-            self.draw_piece(self.current, self.highlight_color)
-        # Next piece preview
-        preview_x = self.playfield_x + GRID_WIDTH * self.cell + 50
-        preview_y = self.playfield_y + 50
-        preview_rect = pygame.Rect(preview_x - 10, preview_y - 10, 100, 100)
-        pygame.draw.rect(self.screen, self.normal_color, preview_rect, 2)
-        for x, y in TETROMINOES[self.next_piece["shape"]][0]:
-            px = preview_x + x * self.cell
-            py = preview_y + y * self.cell
-            rect = pygame.Rect(px, py, self.cell, self.cell)
-            pygame.draw.rect(self.screen, self.highlight_color, rect)
-            pygame.draw.rect(self.screen, self.normal_color, rect, 1)
+            if self.state in ("play", "pause") and not board["gameover"]:
+                self.draw_piece(board, board["current"], self.highlight_color)
 
-        # Score
-        score_text = self.font.render(f"Score: {self.score}", True, self.highlight_color)
-        self.screen.blit(score_text, (preview_x, preview_y + 120))
-        hs_text = self.font.render(f"High: {self.high_score}", True, self.highlight_color)
-        self.screen.blit(hs_text, (preview_x, preview_y + 150))
+            preview_x = board["playfield_x"] + GRID_WIDTH * self.cell + 50
+            preview_y = board["playfield_y"] + 50
+            preview_rect = pygame.Rect(preview_x - 10, preview_y - 10, 100, 100)
+            pygame.draw.rect(self.screen, self.normal_color, preview_rect, 2)
+            for x, y in TETROMINOES[board["next_piece"]["shape"]][0]:
+                px = preview_x + x * self.cell
+                py = preview_y + y * self.cell
+                rect = pygame.Rect(px, py, self.cell, self.cell)
+                pygame.draw.rect(self.screen, self.highlight_color, rect)
+                pygame.draw.rect(self.screen, self.normal_color, rect, 1)
+
+            label = f"P{idx + 1}: {board['score']}" if self.board2 else f"Score: {board['score']}"
+            score_text = self.font.render(label, True, self.highlight_color)
+            self.screen.blit(score_text, (preview_x, preview_y + 120))
+            if idx == 0:
+                hs_text = self.font.render(f"High: {self.high_score}", True, self.highlight_color)
+                self.screen.blit(hs_text, (preview_x, preview_y + 150))
 
         if self.state == "instructions":
             text1 = self.big_font.render("TETROID", True, self.highlight_color)
-            text2 = self.font.render("Press any key", True, self.highlight_color)
-            rect1 = text1.get_rect(center=(width // 2, height // 3))
-            rect2 = text2.get_rect(center=(width // 2, height // 2))
-            self.screen.blit(text1, rect1)
-            self.screen.blit(text2, rect2)
+            if self.board2:
+                text2 = self.font.render("P1: Arrows  P2: WASD", True, self.highlight_color)
+                text3 = self.font.render("Press any key", True, self.highlight_color)
+                rect1 = text1.get_rect(center=(width // 2, height // 3))
+                rect2 = text2.get_rect(center=(width // 2, height // 2))
+                rect3 = text3.get_rect(center=(width // 2, height // 2 + 40))
+                self.screen.blit(text1, rect1)
+                self.screen.blit(text2, rect2)
+                self.screen.blit(text3, rect3)
+            else:
+                text2 = self.font.render("Press any key", True, self.highlight_color)
+                rect1 = text1.get_rect(center=(width // 2, height // 3))
+                rect2 = text2.get_rect(center=(width // 2, height // 2))
+                self.screen.blit(text1, rect1)
+                self.screen.blit(text2, rect2)
         elif self.state == "pause":
             overlay = pygame.Surface(self.screen.get_size(), pygame.SRCALPHA)
             overlay.fill((0, 0, 0, 200))
