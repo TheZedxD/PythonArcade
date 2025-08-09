@@ -65,6 +65,30 @@ class MainMenuState(State):
                     self.next = choice
                     self.done = True
 
+    def handle_gamepad(self, event):
+        if event.type == pygame.JOYBUTTONDOWN:
+            if event.button == 0:
+                choice = self.options[self.index][0]
+                if choice == "Quit":
+                    self.quit = True
+                else:
+                    self.next = choice
+                    self.done = True
+            elif event.button in (1, 9):
+                self.quit = True
+        elif event.type in (pygame.JOYAXISMOTION, pygame.JOYHATMOTION):
+            if event.type == pygame.JOYHATMOTION:
+                x, y = event.value
+                vert = y
+            else:
+                if event.axis != 1:
+                    return
+                vert = -event.value
+            if vert > 0.5 or vert == 1:
+                self.index = (self.index - 1) % len(self.options)
+            elif vert < -0.5 or vert == -1:
+                self.index = (self.index + 1) % len(self.options)
+
     def update(self, dt):
         width, height = self.screen.get_size()
         for g in self.rain_glyphs:

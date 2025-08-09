@@ -212,6 +212,82 @@ class TetroidState(State):
                 self.done = True
                 self.next = "menu"
 
+    def handle_gamepad(self, event):
+        if self.state == "instructions":
+            if event.type == pygame.JOYBUTTONDOWN:
+                self.state = "play"
+        elif self.state == "play":
+            if event.type == pygame.JOYBUTTONDOWN:
+                if event.button == 0:
+                    self.rotate()
+                elif event.button == 1:
+                    while not self.collides(self.current, 0, 1):
+                        self.current["y"] += 1
+                elif event.button in (7, 9):
+                    self.state = "pause"
+                    self.pause_index = 0
+            elif event.type == pygame.JOYAXISMOTION:
+                if event.axis == 0:
+                    if event.value < -0.5 and not self.collides(self.current, -1, 0):
+                        self.current["x"] -= 1
+                    elif event.value > 0.5 and not self.collides(self.current, 1, 0):
+                        self.current["x"] += 1
+                elif event.axis == 1:
+                    if event.value > 0.5 and not self.collides(self.current, 0, 1):
+                        self.current["y"] += 1
+            elif event.type == pygame.JOYHATMOTION:
+                x, y = event.value
+                if x == -1 and not self.collides(self.current, -1, 0):
+                    self.current["x"] -= 1
+                elif x == 1 and not self.collides(self.current, 1, 0):
+                    self.current["x"] += 1
+                if y == -1 and not self.collides(self.current, 0, 1):
+                    self.current["y"] += 1
+                elif y == 1:
+                    self.rotate()
+        elif self.state == "pause":
+            if event.type in (pygame.JOYAXISMOTION, pygame.JOYHATMOTION):
+                if event.type == pygame.JOYHATMOTION:
+                    _, y = event.value
+                    vert = -y
+                else:
+                    if event.axis != 1:
+                        return
+                    vert = event.value
+                if vert < -0.5 or vert == -1:
+                    self.pause_index = (self.pause_index - 1) % len(self.pause_options)
+                elif vert > 0.5 or vert == 1:
+                    self.pause_index = (self.pause_index + 1) % len(self.pause_options)
+            elif event.type == pygame.JOYBUTTONDOWN:
+                if event.button == 0:
+                    choice = self.pause_options[self.pause_index]
+                    if choice == "Resume":
+                        self.state = "play"
+                    elif choice == "Quit":
+                        self.update_stats()
+                        self.done = True
+                        self.next = "menu"
+                    elif choice == "Fullscreen":
+                        pygame.display.toggle_fullscreen()
+                        self.settings["fullscreen"] = not self.settings.get("fullscreen", False)
+                        save_json(SETTINGS_PATH, self.settings)
+                    elif choice == "Volume +":
+                        vol = min(1.0, self.settings.get("sound_volume", 1.0) + 0.1)
+                        self.settings["sound_volume"] = round(vol, 2)
+                        pygame.mixer.music.set_volume(vol)
+                        save_json(SETTINGS_PATH, self.settings)
+                    elif choice == "Volume -":
+                        vol = max(0.0, self.settings.get("sound_volume", 1.0) - 0.1)
+                        self.settings["sound_volume"] = round(vol, 2)
+                        pygame.mixer.music.set_volume(vol)
+                        save_json(SETTINGS_PATH, self.settings)
+                elif event.button in (1, 7, 9):
+                    self.state = "play"
+        elif self.state == "gameover":
+            if event.type == pygame.JOYBUTTONDOWN:
+                self.done = True
+                self.next = "menu"
+
     def update_stats(self):
         if self.score > self.high_score:
             self.high_score = self.score

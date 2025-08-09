@@ -38,6 +38,38 @@ class SettingsState(State):
                 else:
                     self.adjust(0)
 
+    def handle_gamepad(self, event):
+        if event.type == pygame.JOYBUTTONDOWN:
+            if event.button == 0:
+                if self.options[self.index] == "Back":
+                    save_json(SETTINGS_PATH, self.settings)
+                    self.done = True
+                    self.next = "menu"
+                else:
+                    self.adjust(0)
+            elif event.button in (1, 9):
+                save_json(SETTINGS_PATH, self.settings)
+                self.done = True
+                self.next = "menu"
+        elif event.type in (pygame.JOYAXISMOTION, pygame.JOYHATMOTION):
+            if event.type == pygame.JOYHATMOTION:
+                x, y = event.value
+            else:
+                if event.axis == 0:
+                    x, y = event.value, 0
+                elif event.axis == 1:
+                    x, y = 0, -event.value
+                else:
+                    return
+            if y > 0.5 or y == 1:
+                self.index = (self.index - 1) % len(self.options)
+            elif y < -0.5 or y == -1:
+                self.index = (self.index + 1) % len(self.options)
+            elif x < -0.5 or x == -1:
+                self.adjust(-0.1)
+            elif x > 0.5 or x == 1:
+                self.adjust(0.1)
+
     def adjust(self, delta):
         option = self.options[self.index]
         if option == "Fullscreen":

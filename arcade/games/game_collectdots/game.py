@@ -23,6 +23,7 @@ class CollectDotsState(State):
         self.data = load_json(self.hs_path,
                               {"highscore": 0, "plays": 0, "last_played": None})
         self.high_score = self.data.get("highscore", 0)
+        self.pad_dirs = {}
 
     def respawn_dot(self):
         width, height = self.screen.get_size()
@@ -53,6 +54,51 @@ class CollectDotsState(State):
                         self.done = True
                         self.next = "menu"
 
+    def handle_gamepad(self, event):
+        if self.state == "instructions":
+            if event.type in (pygame.JOYBUTTONDOWN, pygame.JOYAXISMOTION,
+                               pygame.JOYHATMOTION):
+                self.state = "play"
+        elif self.state == "play":
+            if event.type == pygame.JOYBUTTONDOWN and event.button == 7:
+                self.state = "pause"
+                self.pause_index = 0
+            elif event.type == pygame.JOYAXISMOTION:
+                if event.axis in (0, 1):
+                    dirs = self.pad_dirs.setdefault(event.joy, [0, 0])
+                    if event.axis == 0:
+                        dirs[0] = event.value if abs(event.value) > 0.2 else 0
+                    else:
+                        dirs[1] = event.value if abs(event.value) > 0.2 else 0
+            elif event.type == pygame.JOYHATMOTION:
+                dirs = self.pad_dirs.setdefault(event.joy, [0, 0])
+                dirs[0] = event.value[0]
+                dirs[1] = -event.value[1]
+        elif self.state == "pause":
+            if event.type in (pygame.JOYAXISMOTION, pygame.JOYHATMOTION):
+                if event.type == pygame.JOYHATMOTION:
+                    _, y = event.value
+                    vert = -y
+                else:
+                    if event.axis != 1:
+                        return
+                    vert = event.value
+                if vert < -0.5 or vert == -1:
+                    self.pause_index = (self.pause_index - 1) % len(self.pause_options)
+                elif vert > 0.5 or vert == 1:
+                    self.pause_index = (self.pause_index + 1) % len(self.pause_options)
+            elif event.type == pygame.JOYBUTTONDOWN:
+                if event.button == 0:
+                    choice = self.pause_options[self.pause_index]
+                    if choice == "Resume":
+                        self.state = "play"
+                    elif choice == "Quit to Menu":
+                        self.update_stats()
+                        self.done = True
+                        self.next = "menu"
+                elif event.button in (1, 7, 9):
+                    self.state = "play"
+
     def update_stats(self):
         if self.score > self.high_score:
             self.high_score = self.score
@@ -74,8 +120,12 @@ class CollectDotsState(State):
             dy -= 1
         if keys[pygame.K_DOWN] or keys[pygame.K_s]:
             dy += 1
-        self.player.x += dx * self.speed * dt
-        self.player.y += dy * self.speed * dt
+        pad_dx = pad_dy = 0
+        for px, py in self.pad_dirs.values():
+            pad_dx += px
+            pad_dy += py
+        self.player.x += (dx + pad_dx) * self.speed * dt
+        self.player.y += (dy + pad_dy) * self.speed * dt
         self.player.clamp_ip(self.screen.get_rect())
         if self.player.colliderect(self.dot):
             self.score += 1
