@@ -1,6 +1,7 @@
 import os
 import random
 import string
+import json
 import math
 import pygame
 from state import State
@@ -39,9 +40,18 @@ class MainMenuState(State):
             module_file = os.path.join(path, "game.py")
             if os.path.isdir(path) and os.path.isfile(module_file):
                 display = name
-                if display.startswith("game_"):
-                    display = display[5:]
-                display = display.replace("_", " ").upper()
+                meta_file = os.path.join(path, "meta.json")
+                if os.path.isfile(meta_file):
+                    try:
+                        with open(meta_file, "r") as f:
+                            meta = json.load(f)
+                            display = meta.get("title", display)
+                    except Exception:
+                        pass
+                else:
+                    if display.startswith("game_"):
+                        display = display[5:]
+                    display = display.replace("_", " ").upper()
                 entries.append((name, display))
         self.options = sorted(entries, key=lambda x: x[1])
         self.options.append(("Settings", "SETTINGS"))
