@@ -67,6 +67,39 @@ class WyrmGame(State):
                 if self.shot_sound:
                     self.shot_sound.play()
 
+    def handle_gamepad(self, event: pygame.event.Event) -> None:
+        if event.type == pygame.JOYBUTTONDOWN:
+            if event.button == 7:
+                self.done = True
+                self.next = "menu"
+            elif event.button == 0:
+                self.bullets.append([self.player[0], self.player[1] - 1])
+                if self.shot_sound:
+                    self.shot_sound.play()
+        elif event.type == pygame.JOYAXISMOTION:
+            if event.axis == 0:
+                if event.value < -0.5:
+                    self.player[0] = max(0, self.player[0] - 1)
+                elif event.value > 0.5:
+                    self.player[0] = min(self.grid_w - 1, self.player[0] + 1)
+            elif event.axis == 1:
+                min_row = int(self.grid_h * 0.8)
+                if event.value < -0.5:
+                    self.player[1] = max(min_row, self.player[1] - 1)
+                elif event.value > 0.5:
+                    self.player[1] = min(self.grid_h - 1, self.player[1] + 1)
+        elif event.type == pygame.JOYHATMOTION:
+            x, y = event.value
+            if x == -1:
+                self.player[0] = max(0, self.player[0] - 1)
+            elif x == 1:
+                self.player[0] = min(self.grid_w - 1, self.player[0] + 1)
+            min_row = int(self.grid_h * 0.8)
+            if y == 1:
+                self.player[1] = max(min_row, self.player[1] - 1)
+            elif y == -1:
+                self.player[1] = min(self.grid_h - 1, self.player[1] + 1)
+
     def update(self, dt: float) -> None:
         self.move_timer += dt
         if self.move_timer >= MOVE_DELAY:

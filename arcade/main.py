@@ -41,6 +41,12 @@ def load_games():
 
 def main():
     pygame.init()
+    pygame.joystick.init()
+    joysticks = []
+    for i in range(pygame.joystick.get_count()):
+        joy = pygame.joystick.Joystick(i)
+        joy.init()
+        joysticks.append(joy)
     settings = load_json(SETTINGS_PATH, DEFAULT_SETTINGS)
     base_size = tuple(settings.get("window_size", [800, 600]))
     flags = pygame.SCALED | (pygame.FULLSCREEN if settings.get("fullscreen") else 0)
@@ -71,6 +77,10 @@ def main():
                 for state in states.values():
                     state.screen = screen
                 save_json(SETTINGS_PATH, settings)
+            elif event.type in (pygame.JOYAXISMOTION, pygame.JOYBALLMOTION,
+                                 pygame.JOYHATMOTION, pygame.JOYBUTTONDOWN,
+                                 pygame.JOYBUTTONUP):
+                current_state.handle_gamepad(event)
             else:
                 current_state.get_event(event)
 
