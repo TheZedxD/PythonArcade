@@ -1,6 +1,11 @@
 #!/bin/sh
 set -e
 
+# Detect Raspberry Pi to provide additional guidance
+if uname -a | grep -qi "raspberry"; then
+    echo "Detected Raspberry Pi – ensure you have SDL drivers installed"
+fi
+
 if command -v apt >/dev/null 2>&1; then
     sudo apt update
     sudo apt install -y python3-venv python3-dev libsdl2-dev libsdl2-image-dev \
@@ -21,6 +26,10 @@ pip install -r requirements.txt
 
 cat > run.sh <<'EOF'
 #!/bin/sh
+if [ -z "$DISPLAY" ]; then
+    echo "A graphical display is required to run the arcade."
+    exit 1
+fi
 . "$(dirname "$0")/venv/bin/activate"
 python "$(dirname "$0")/main.py"
 EOF
