@@ -7,7 +7,7 @@ import pygame
 from state import State
 from utils.persistence import load_json, save_json
 
-# Grid dimensions for Dr. Mario bottle
+# Grid dimensions for Virus bottle
 GRID_WIDTH = 8
 GRID_HEIGHT = 16
 
@@ -23,8 +23,8 @@ COLORS = [
 ]
 
 
-class DrMarioState(State):
-    """Dr. Mario clone game state (matrix-themed)."""
+class VirusState(State):
+    """Virus (Dr. Mario clone) game state with a Matrix-style aesthetic."""
 
     def startup(self, screen, num_players: int = 1):
         super().startup(screen, num_players)
@@ -635,7 +635,7 @@ class DrMarioState(State):
         # Draw overlay screens for instructions, pause, and game over states
         if self.state == "instructions":
             # Title
-            title_text = self.big_font.render("DR MARIO", True, self.highlight_color)
+            title_text = self.big_font.render("VIRUS", True, self.highlight_color)
             title_rect = title_text.get_rect(center=(width // 2, height // 5))
             self.screen.blit(title_text, title_rect)
             if self.board2:
