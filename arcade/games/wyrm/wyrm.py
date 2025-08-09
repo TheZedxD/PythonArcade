@@ -15,16 +15,22 @@ class WyrmGame(State):
 
     def __init__(self) -> None:
         super().__init__()
-        self.score = 0
-        self.lives = 3
+        self.score1 = 0
+        self.score2 = 0
+        self.lives1 = 3
+        self.lives2 = 3
         self.wyrms: List[List[Tuple[int, int]]] = [
             [(i, 0) for i in range(NUM_SEGMENTS)]
         ]
         self.blocks: Set[Tuple[int, int]] = set()
         self.move_timer = 0.0
+        self.move_delay = MOVE_DELAY
         self.direction = 1
-        self.player = [0, 0]
-        self.bullets: List[List[int]] = []
+        self.start_pos1 = [0, 0]
+        self.start_pos2 = [0, 0]
+        self.player1 = self.start_pos1.copy()
+        self.player2 = self.start_pos2.copy()
+        self.bullets: List[List[int]] = []  # [x, y, player]
         self.segment_img: pygame.Surface | None = None
         self.shot_sound: pygame.mixer.Sound | None = None
         self.grid_w = 0
@@ -36,7 +42,16 @@ class WyrmGame(State):
         width, height = self.screen.get_size()
         self.grid_w = width // GRID_SIZE
         self.grid_h = height // GRID_SIZE
-        self.player = [self.grid_w // 2, int(self.grid_h * 0.8)]
+        start_row = int(self.grid_h * 0.8)
+        self.start_pos1 = [int(self.grid_w * 0.4), start_row]
+        self.start_pos2 = [int(self.grid_w * 0.6), start_row]
+        self.player1 = self.start_pos1.copy()
+        self.player2 = self.start_pos2.copy()
+        self.score1 = 0
+        self.score2 = 0
+        self.lives1 = 3
+        self.lives2 = 3
+        self.move_delay = MOVE_DELAY
         self.font = pygame.font.SysFont("Courier", 20)
         base = os.path.join(os.path.dirname(__file__), "assets")
         try:
@@ -55,19 +70,37 @@ class WyrmGame(State):
             if event.key == pygame.K_ESCAPE:
                 self.done = True
                 self.next = "menu"
-            elif event.key in (pygame.K_LEFT, pygame.K_a):
-                self.player[0] = max(0, self.player[0] - 1)
-            elif event.key in (pygame.K_RIGHT, pygame.K_d):
-                self.player[0] = min(self.grid_w - 1, self.player[0] + 1)
-            elif event.key in (pygame.K_UP, pygame.K_w):
+
+            # Player 1 controls (arrows + space)
+            if event.key == pygame.K_LEFT:
+                self.player1[0] = max(0, self.player1[0] - 1)
+            elif event.key == pygame.K_RIGHT:
+                self.player1[0] = min(self.grid_w - 1, self.player1[0] + 1)
+            elif event.key == pygame.K_UP:
                 min_row = int(self.grid_h * 0.8)
-                self.player[1] = max(min_row, self.player[1] - 1)
-            elif event.key in (pygame.K_DOWN, pygame.K_s):
-                self.player[1] = min(self.grid_h - 1, self.player[1] + 1)
+                self.player1[1] = max(min_row, self.player1[1] - 1)
+            elif event.key == pygame.K_DOWN:
+                self.player1[1] = min(self.grid_h - 1, self.player1[1] + 1)
             elif event.key == pygame.K_SPACE:
-                self.bullets.append([self.player[0], self.player[1] - 1])
+                self.bullets.append([self.player1[0], self.player1[1] - 1, 1])
                 if self.shot_sound:
                     self.shot_sound.play()
+
+            # Player 2 controls (WASD + left ctrl)
+            if self.num_players > 1:
+                if event.key == pygame.K_a:
+                    self.player2[0] = max(0, self.player2[0] - 1)
+                elif event.key == pygame.K_d:
+                    self.player2[0] = min(self.grid_w - 1, self.player2[0] + 1)
+                elif event.key == pygame.K_w:
+                    min_row = int(self.grid_h * 0.8)
+                    self.player2[1] = max(min_row, self.player2[1] - 1)
+                elif event.key == pygame.K_s:
+                    self.player2[1] = min(self.grid_h - 1, self.player2[1] + 1)
+                elif event.key == pygame.K_LCTRL:
+                    self.bullets.append([self.player2[0], self.player2[1] - 1, 2])
+                    if self.shot_sound:
+                        self.shot_sound.play()
 
     def handle_gamepad(self, event: pygame.event.Event) -> None:
         if event.type == pygame.JOYBUTTONDOWN:
@@ -75,36 +108,36 @@ class WyrmGame(State):
                 self.done = True
                 self.next = "menu"
             elif event.button == 0:
-                self.bullets.append([self.player[0], self.player[1] - 1])
+                self.bullets.append([self.player1[0], self.player1[1] - 1, 1])
                 if self.shot_sound:
                     self.shot_sound.play()
         elif event.type == pygame.JOYAXISMOTION:
             if event.axis == 0:
                 if event.value < -0.5:
-                    self.player[0] = max(0, self.player[0] - 1)
+                    self.player1[0] = max(0, self.player1[0] - 1)
                 elif event.value > 0.5:
-                    self.player[0] = min(self.grid_w - 1, self.player[0] + 1)
+                    self.player1[0] = min(self.grid_w - 1, self.player1[0] + 1)
             elif event.axis == 1:
                 min_row = int(self.grid_h * 0.8)
                 if event.value < -0.5:
-                    self.player[1] = max(min_row, self.player[1] - 1)
+                    self.player1[1] = max(min_row, self.player1[1] - 1)
                 elif event.value > 0.5:
-                    self.player[1] = min(self.grid_h - 1, self.player[1] + 1)
+                    self.player1[1] = min(self.grid_h - 1, self.player1[1] + 1)
         elif event.type == pygame.JOYHATMOTION:
             x, y = event.value
             if x == -1:
-                self.player[0] = max(0, self.player[0] - 1)
+                self.player1[0] = max(0, self.player1[0] - 1)
             elif x == 1:
-                self.player[0] = min(self.grid_w - 1, self.player[0] + 1)
+                self.player1[0] = min(self.grid_w - 1, self.player1[0] + 1)
             min_row = int(self.grid_h * 0.8)
             if y == 1:
-                self.player[1] = max(min_row, self.player[1] - 1)
+                self.player1[1] = max(min_row, self.player1[1] - 1)
             elif y == -1:
-                self.player[1] = min(self.grid_h - 1, self.player[1] + 1)
+                self.player1[1] = min(self.grid_h - 1, self.player1[1] + 1)
 
     def update(self, dt: float) -> None:
         self.move_timer += dt
-        if self.move_timer >= MOVE_DELAY:
+        if self.move_timer >= self.move_delay:
             self.move_timer = 0.0
             self._move_wyrms()
 
@@ -116,9 +149,22 @@ class WyrmGame(State):
             for ci, chain in enumerate(self.wyrms):
                 for si, seg in enumerate(chain):
                     if (bullet[0], bullet[1]) == seg:
+                        shooter = bullet[2]
                         self.bullets.remove(bullet)
-                        self.handle_segment_hit(ci, si)
+                        self.handle_segment_hit(ci, si, shooter)
                         break
+
+        # Check for collisions between players and wyrm segments
+        for chain in self.wyrms:
+            for seg in chain:
+                if self.lives1 > 0 and tuple(self.player1) == seg:
+                    self._player_hit(1)
+                if (
+                    self.num_players > 1
+                    and self.lives2 > 0
+                    and tuple(self.player2) == seg
+                ):
+                    self._player_hit(2)
 
     def _move_wyrms(self) -> None:
         for chain in self.wyrms:
@@ -131,22 +177,52 @@ class WyrmGame(State):
             chain.insert(0, (new_x, head_y))
             chain.pop()
 
-    def handle_segment_hit(self, chain_idx: int, seg_idx: int) -> None:
+    def handle_segment_hit(
+        self, chain_idx: int, seg_idx: int, shooter: int = 1
+    ) -> None:
         chain = self.wyrms[chain_idx]
         hit_pos = chain[seg_idx]
         if seg_idx == 0:
-            self.score += 100
+            if shooter == 1:
+                self.score1 += 100
+            else:
+                self.score2 += 100
             del chain[0]
             if not chain:
                 del self.wyrms[chain_idx]
         else:
-            self.score += 10
+            if shooter == 1:
+                self.score1 += 10
+            else:
+                self.score2 += 10
             left = chain[:seg_idx]
             right = chain[seg_idx + 1 :]
             self.blocks.add(hit_pos)
             self.wyrms[chain_idx] = left
             if right:
                 self.wyrms.insert(chain_idx + 1, right)
+        self._update_speed()
+
+    def _player_hit(self, player: int) -> None:
+        if player == 1:
+            self.lives1 -= 1
+            if self.lives1 <= 0 and (self.num_players == 1 or self.lives2 <= 0):
+                self.done = True
+                self.next = "menu"
+            elif self.lives1 > 0:
+                self.player1 = self.start_pos1.copy()
+        else:
+            self.lives2 -= 1
+            if self.lives2 <= 0 and self.lives1 <= 0:
+                self.done = True
+                self.next = "menu"
+            elif self.lives2 > 0:
+                self.player2 = self.start_pos2.copy()
+
+    def _update_speed(self) -> None:
+        total = self.score1 + self.score2
+        level = total // 500
+        self.move_delay = max(0.05, MOVE_DELAY * (0.9**level))
 
     def draw(self) -> None:
         self.screen.fill((0, 0, 0))
@@ -160,19 +236,28 @@ class WyrmGame(State):
         for x, y in self.blocks:
             pygame.draw.rect(
                 self.screen,
-                (0, 155, 0),
+                (155, 0, 155),
                 (x * GRID_SIZE, y * GRID_SIZE, GRID_SIZE, GRID_SIZE),
             )
-        px, py = self.player
-        pygame.draw.rect(
-            self.screen,
-            (0, 255, 0),
-            (px * GRID_SIZE, py * GRID_SIZE, GRID_SIZE, GRID_SIZE),
-        )
-        for x, y in self.bullets:
+        if self.lives1 > 0:
+            px, py = self.player1
             pygame.draw.rect(
                 self.screen,
                 (0, 255, 0),
+                (px * GRID_SIZE, py * GRID_SIZE, GRID_SIZE, GRID_SIZE),
+            )
+        if self.num_players > 1 and self.lives2 > 0:
+            px, py = self.player2
+            pygame.draw.rect(
+                self.screen,
+                (0, 128, 255),
+                (px * GRID_SIZE, py * GRID_SIZE, GRID_SIZE, GRID_SIZE),
+            )
+        for x, y, shooter in self.bullets:
+            color = (0, 255, 0) if shooter == 1 else (0, 128, 255)
+            pygame.draw.rect(
+                self.screen,
+                color,
                 (
                     x * GRID_SIZE + GRID_SIZE // 4,
                     y * GRID_SIZE,
@@ -181,13 +266,23 @@ class WyrmGame(State):
                 ),
             )
         if self.font:
-            text = self.font.render(f"Score: {self.score}", True, (0, 255, 0))
+            text = self.font.render(
+                f"P1: {self.score1} L{self.lives1}", True, (0, 255, 0)
+            )
             self.screen.blit(text, (5, 5))
+            if self.num_players > 1:
+                text2 = self.font.render(
+                    f"P2: {self.score2} L{self.lives2}", True, (0, 255, 0)
+                )
+                self.screen.blit(
+                    text2,
+                    (self.screen.get_width() - text2.get_width() - 5, 5),
+                )
 
     def game_over(self, name: str) -> None:
-        from arcade.high_scores import save_score
+        from high_scores import save_score
 
-        save_score("wyrm", name, self.score)
+        save_score("wyrm", name, max(self.score1, self.score2))
 
 
 def main() -> None:
