@@ -7,12 +7,14 @@ class State:
         self.quit = False
         self.next = None
         self.screen = None
+        self.num_players = 1
 
-    def startup(self, screen):
+    def startup(self, screen, num_players: int = 1):
         """Called when the state starts up."""
         self.done = False
         self.quit = False
         self.screen = screen
+        self.num_players = num_players
 
     def cleanup(self):
         """Cleanup before the state is destroyed or switched."""

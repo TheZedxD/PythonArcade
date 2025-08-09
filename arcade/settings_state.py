@@ -13,8 +13,8 @@ DEFAULT_SETTINGS = {
 
 
 class SettingsState(State):
-    def startup(self, screen):
-        super().startup(screen)
+    def startup(self, screen, num_players: int = 1):
+        super().startup(screen, num_players)
         self.font = pygame.font.SysFont("Courier", 32)
         self.index = 0
         self.settings = load_json(SETTINGS_PATH, DEFAULT_SETTINGS)

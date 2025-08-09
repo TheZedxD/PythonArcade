@@ -18,9 +18,12 @@ class MainMenuState(State):
         self.bg_color = (0, 0, 0)
         self.rain_glyphs = []
         self.rain_chars = string.ascii_letters + string.digits
+        self.phase = "game"
+        self.selected_game = None
 
-    def startup(self, screen):
-        super().startup(screen)
+    def startup(self, screen, num_players: int = 1):
+        super().startup(screen, num_players)
+        self.num_players = 1
         self.font = pygame.font.SysFont("Courier", 32)
         self.title_font = pygame.font.SysFont("Courier", 48, bold=True)
         self.rain_font = pygame.font.SysFont("Courier", 20)
@@ -39,6 +42,8 @@ class MainMenuState(State):
         self.options.append(("Settings", "SETTINGS"))
         self.options.append(("Quit", "QUIT"))
         self.index = 0
+        self.phase = "game"
+        self.selected_game = None
 
         width, height = self.screen.get_size()
         self.rain_glyphs = []
@@ -50,44 +55,76 @@ class MainMenuState(State):
             self.rain_glyphs.append([x, y, speed, char])
 
     def handle_keyboard(self, event):
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_ESCAPE:
-                self.quit = True
-            elif event.key in (pygame.K_DOWN, pygame.K_s):
-                self.index = (self.index + 1) % len(self.options)
-            elif event.key in (pygame.K_UP, pygame.K_w):
-                self.index = (self.index - 1) % len(self.options)
-            elif event.key == pygame.K_RETURN:
-                choice = self.options[self.index][0]
-                if choice == "Quit":
+        if self.phase == "game":
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
                     self.quit = True
-                else:
-                    self.next = choice
+                elif event.key in (pygame.K_DOWN, pygame.K_s):
+                    self.index = (self.index + 1) % len(self.options)
+                elif event.key in (pygame.K_UP, pygame.K_w):
+                    self.index = (self.index - 1) % len(self.options)
+                elif event.key == pygame.K_RETURN:
+                    choice = self.options[self.index][0]
+                    if choice == "Quit":
+                        self.quit = True
+                    elif choice == "Settings":
+                        self.next = choice
+                        self.done = True
+                    else:
+                        self.selected_game = choice
+                        self.phase = "players"
+        elif self.phase == "players":
+            if event.type == pygame.KEYDOWN:
+                if event.key in (pygame.K_1, pygame.K_KP1):
+                    self.num_players = 1
+                    self.next = self.selected_game
                     self.done = True
+                elif event.key in (pygame.K_2, pygame.K_KP2):
+                    self.num_players = 2
+                    self.next = self.selected_game
+                    self.done = True
+                elif event.key == pygame.K_ESCAPE:
+                    self.phase = "game"
 
     def handle_gamepad(self, event):
-        if event.type == pygame.JOYBUTTONDOWN:
-            if event.button == 0:
-                choice = self.options[self.index][0]
-                if choice == "Quit":
+        if self.phase == "game":
+            if event.type == pygame.JOYBUTTONDOWN:
+                if event.button == 0:
+                    choice = self.options[self.index][0]
+                    if choice == "Quit":
+                        self.quit = True
+                    elif choice == "Settings":
+                        self.next = choice
+                        self.done = True
+                    else:
+                        self.selected_game = choice
+                        self.phase = "players"
+                elif event.button in (1, 9):
                     self.quit = True
+            elif event.type in (pygame.JOYAXISMOTION, pygame.JOYHATMOTION):
+                if event.type == pygame.JOYHATMOTION:
+                    x, y = event.value
+                    vert = y
                 else:
-                    self.next = choice
+                    if event.axis != 1:
+                        return
+                    vert = -event.value
+                if vert > 0.5 or vert == 1:
+                    self.index = (self.index - 1) % len(self.options)
+                elif vert < -0.5 or vert == -1:
+                    self.index = (self.index + 1) % len(self.options)
+        elif self.phase == "players":
+            if event.type == pygame.JOYBUTTONDOWN:
+                if event.button == 0:
+                    self.num_players = 1
+                    self.next = self.selected_game
                     self.done = True
-            elif event.button in (1, 9):
-                self.quit = True
-        elif event.type in (pygame.JOYAXISMOTION, pygame.JOYHATMOTION):
-            if event.type == pygame.JOYHATMOTION:
-                x, y = event.value
-                vert = y
-            else:
-                if event.axis != 1:
-                    return
-                vert = -event.value
-            if vert > 0.5 or vert == 1:
-                self.index = (self.index - 1) % len(self.options)
-            elif vert < -0.5 or vert == -1:
-                self.index = (self.index + 1) % len(self.options)
+                elif event.button == 1:
+                    self.num_players = 2
+                    self.next = self.selected_game
+                    self.done = True
+                elif event.button in (7, 9):
+                    self.phase = "game"
 
     def update(self, dt):
         width, height = self.screen.get_size()
@@ -116,9 +153,14 @@ class MainMenuState(State):
         title_rect = title.get_rect(center=(width // 2, height // 5))
         self.screen.blit(title, title_rect)
 
-        for i, (_, label) in enumerate(self.options):
-            color = self.highlight_color if i == self.index else self.normal_color
-            prefix = "> " if i == self.index else "  "
-            text = self.font.render(prefix + label, True, color)
-            rect = text.get_rect(center=(width // 2, height // 3 + i * 40))
-            self.screen.blit(text, rect)
+        if self.phase == "game":
+            for i, (_, label) in enumerate(self.options):
+                color = self.highlight_color if i == self.index else self.normal_color
+                prefix = "> " if i == self.index else "  "
+                text = self.font.render(prefix + label, True, color)
+                rect = text.get_rect(center=(width // 2, height // 3 + i * 40))
+                self.screen.blit(text, rect)
+        else:
+            prompt = self.font.render("1 or 2 PLAYERS?", True, self.highlight_color)
+            rect = prompt.get_rect(center=(width // 2, height // 2))
+            self.screen.blit(prompt, rect)

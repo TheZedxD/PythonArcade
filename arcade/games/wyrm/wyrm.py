@@ -30,8 +30,8 @@ class WyrmGame(State):
         self.grid_w = 0
         self.grid_h = 0
 
-    def startup(self, screen: pygame.Surface) -> None:
-        super().startup(screen)
+    def startup(self, screen: pygame.Surface, num_players: int = 1) -> None:
+        super().startup(screen, num_players)
         width, height = self.screen.get_size()
         self.grid_w = width // GRID_SIZE
         self.grid_h = height // GRID_SIZE
