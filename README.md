@@ -22,8 +22,21 @@ A collection of simple Pygame-based games packaged under an arcade shell.
    bash scripts/run_linux.sh
 
    # Windows
-   scripts\run_windows.bat
+       scripts\run_windows.bat
    ```
+
+## Updating
+
+To pull the latest changes and refresh dependencies without losing your saves or
+configuration, run the update script for your platform:
+
+```sh
+# Linux
+bash scripts/update_linux.sh
+
+# Windows
+scripts\update_windows.bat
+```
 
 ## Troubleshooting
 
