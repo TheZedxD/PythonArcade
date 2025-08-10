@@ -28,7 +28,12 @@ DEFAULT_CONFIG = {
     "base_blast_radius": 2,
     "max_bombs_per_player": 1,
     "max_blast_radius": 5,
+    "max_enemy_count": 9,
+    "min_fuse_ms": 500,
+    "max_fuse_ms": 5000,
+    "max_bomb_limit": 9,
     "powerup_chance": 0.2,
+    "time_limit": 0,
 }
 
 
@@ -37,7 +42,26 @@ class BombermanGame(State):
 
     def startup(self, screen, num_players: int = 1, **opts):
         super().startup(screen, num_players, **opts)
-        self.config = load_json(CONFIG_PATH, DEFAULT_CONFIG)
+        cfg = load_json(CONFIG_PATH, DEFAULT_CONFIG)
+        max_enemy = cfg.get("max_enemy_count", 9)
+        cfg["enemy_count"] = max(0, min(cfg.get("enemy_count", 3), max_enemy))
+        cfg["max_enemy_count"] = max_enemy
+        min_fuse = cfg.get("min_fuse_ms", 500)
+        max_fuse = cfg.get("max_fuse_ms", 5000)
+        cfg["fuse_ms"] = max(min_fuse, min(cfg.get("fuse_ms", 2000), max_fuse))
+        cfg["min_fuse_ms"] = min_fuse
+        cfg["max_fuse_ms"] = max_fuse
+        max_bomb_limit = cfg.get("max_bomb_limit", 9)
+        cfg["max_bombs_per_player"] = max(
+            1, min(cfg.get("max_bombs_per_player", 1), max_bomb_limit)
+        )
+        cfg["max_bomb_limit"] = max_bomb_limit
+        max_radius = cfg.get("max_blast_radius", 5)
+        cfg["base_blast_radius"] = max(
+            1, min(cfg.get("base_blast_radius", 2), max_radius)
+        )
+        cfg["max_blast_radius"] = max_radius
+        self.config = cfg
         self.settings = load_json(
             SETTINGS_PATH,
             {
@@ -275,11 +299,15 @@ class BombermanGame(State):
         elif option == "Map Size":
             self.map_size_index = (self.map_size_index + delta) % len(self.map_sizes)
         elif option == "Enemy Count" and self.mode == 1:
-            self.enemy_count = max(0, min(9, self.enemy_count + delta))
+            limit = self.config.get("max_enemy_count", 9)
+            self.enemy_count = max(0, min(limit, self.enemy_count + delta))
         elif option == "Bomb Fuse":
-            self.fuse_ms = max(500, min(5000, self.fuse_ms + delta * 500))
+            min_fuse = self.config.get("min_fuse_ms", 500)
+            max_fuse = self.config.get("max_fuse_ms", 5000)
+            self.fuse_ms = max(min_fuse, min(max_fuse, self.fuse_ms + delta * 500))
         elif option == "Max Bombs":
-            self.max_bombs = max(1, min(9, self.max_bombs + delta))
+            limit = self.config.get("max_bomb_limit", 9)
+            self.max_bombs = max(1, min(limit, self.max_bombs + delta))
         elif option == "Audio" and delta != 0:
             self.audio_on = not self.audio_on
 

@@ -20,6 +20,13 @@ class Level:
         self.grid: List[List[int]] = [
             [EMPTY for _ in range(self.width)] for _ in range(self.height)
         ]
+        self.rects = [
+            [
+                (x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+                for x in range(self.width)
+            ]
+            for y in range(self.height)
+        ]
         self.generate()
 
     def generate(self) -> None:
@@ -113,7 +120,7 @@ class Level:
         for y in range(self.height):
             for x in range(self.width):
                 tile = self.grid[y][x]
-                rect = (x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+                rect = self.rects[y][x]
                 if tile == WALL:
                     if wall:
                         surface.blit(wall, rect[:2])

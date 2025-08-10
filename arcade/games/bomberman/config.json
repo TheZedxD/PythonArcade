@@ -6,6 +6,10 @@
   "base_blast_radius": 2,
   "max_bombs_per_player": 1,
   "max_blast_radius": 5,
+  "max_enemy_count": 9,
+  "min_fuse_ms": 500,
+  "max_fuse_ms": 5000,
+  "max_bomb_limit": 9,
   "powerup_chance": 0.2,
   "time_limit": 0
 }
