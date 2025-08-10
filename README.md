@@ -80,7 +80,7 @@ Currently included:
 - Virus – Matrix-themed Dr. Mario-style pill matcher.
 - Kart 8-Bit – retro-inspired split-screen kart racer. WASD or arrow keys to steer,
   Shift/Right Ctrl to boost, Tab to swap splitscreen.
-- Bomberman (Matrix) – drop bombs to clear paths and defeat foes. Arrow keys/WASD to
-  move, Space/Left Shift to plant bombs.
+- [Bomberman (Matrix)](arcade/games/bomberman/README.md) – drop bombs to clear paths
+  and defeat foes. Arrow keys/WASD to move, Space/Left Shift to plant bombs.
 
 Contributions and new mini-games are welcome!
