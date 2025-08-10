@@ -6,9 +6,7 @@ import pygame
 from state import State
 from utils.persistence import load_json, save_json
 
-SETTINGS_PATH = os.path.join(
-    os.path.dirname(__file__), "..", "..", "settings.json"
-)
+SETTINGS_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "settings.json")
 
 GRID_SIZE = 20
 NUM_SEGMENTS = 12
@@ -244,9 +242,7 @@ class WyrmGame(State):
     def update(self, dt: float) -> None:
         if self.state != "play":
             if self.state == "pause":
-                pygame.mixer.music.set_volume(
-                    self.settings.get("sound_volume", 1.0)
-                )
+                pygame.mixer.music.set_volume(self.settings.get("sound_volume", 1.0))
             return
 
         self.move_timer += dt
