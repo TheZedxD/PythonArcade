@@ -108,19 +108,22 @@ class Level:
     def draw(
         self, surface: pygame.surface.Surface, assets: dict[str, pygame.surface.Surface]
     ) -> None:
+        wall = assets.get("wall")
+        brick = assets.get("brick")
         for y in range(self.height):
             for x in range(self.width):
                 tile = self.grid[y][x]
-                pos = (x * TILE_SIZE, y * TILE_SIZE)
+                rect = (x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
                 if tile == WALL:
-                    surface.blit(assets["wall"], pos)
+                    if wall:
+                        surface.blit(wall, rect[:2])
+                    else:
+                        pygame.draw.rect(surface, (0, 40, 0), rect)
                 elif tile == BRICK:
-                    surface.blit(assets["brick"], pos)
+                    if brick:
+                        surface.blit(brick, rect[:2])
+                    else:
+                        pygame.draw.rect(surface, (0, 80, 0), rect)
                 else:
-                    pygame.draw.rect(
-                        surface, (0, 0, 0), (pos[0], pos[1], TILE_SIZE, TILE_SIZE)
-                    )
-                # grid lines
-                pygame.draw.rect(
-                    surface, (0, 40, 0), (pos[0], pos[1], TILE_SIZE, TILE_SIZE), 1
-                )
+                    pygame.draw.rect(surface, (0, 0, 0), rect)
+                pygame.draw.rect(surface, (0, 40, 0), rect, 1)

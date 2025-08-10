@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import os
+from pathlib import Path
 import random
 import pygame
 
@@ -18,8 +18,9 @@ from .bomb import Bomb
 from .explosion import Explosion
 from .powerups import PowerUp
 
-CONFIG_PATH = os.path.join(os.path.dirname(__file__), "config.json")
-SETTINGS_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "settings.json")
+BASE_PATH = Path(__file__).resolve().parent
+CONFIG_PATH = BASE_PATH / "config.json"
+SETTINGS_PATH = BASE_PATH.parents[2] / "settings.json"
 DEFAULT_CONFIG = {
     "map_size": [15, 13],
     "enemy_count": 3,
@@ -92,34 +93,54 @@ class BombermanGame(State):
 
     # ------------------------------------------------------------------ utils
     def _load_assets(self) -> dict[str, pygame.surface.Surface]:
-        """Generate simple colored surfaces instead of loading images."""
+        """Load image assets relative to this module with graceful fallbacks."""
 
-        def surface(color: tuple[int, int, int]) -> pygame.surface.Surface:
+        asset_dir = BASE_PATH / "assets"
+        placeholders: dict[str, bool] = {}
+
+        def load_image(
+            name: str, color: tuple[int, int, int]
+        ) -> pygame.surface.Surface:
+            path = asset_dir / f"{name}.png"
+            if path.is_file():
+                try:
+                    return pygame.image.load(str(path)).convert_alpha()
+                except pygame.error:
+                    pass
             surf = pygame.Surface((TILE_SIZE, TILE_SIZE), pygame.SRCALPHA)
             surf.fill(color)
+            placeholders[name] = True
             return surf
 
         assets = {
-            "wall": surface((0, 40, 0)),
-            "brick": surface((0, 80, 0)),
-            "player1": surface((0, 200, 0)),
-            "player2": surface((0, 200, 80)),
-            "enemy": surface((200, 0, 0)),
-            "bomb": surface((0, 0, 0)),
-            "blast": surface((200, 200, 0)),
-            "powerup": surface((0, 200, 200)),
+            "wall": load_image("wall", (0, 40, 0)),
+            "brick": load_image("brick", (0, 80, 0)),
+            "player1": load_image("player1", (0, 200, 0)),
+            "player2": load_image("player2", (0, 200, 80)),
+            "enemy": load_image("enemy", (200, 0, 0)),
+            "bomb": load_image("bomb", (0, 0, 0)),
+            "blast": load_image("blast", (200, 200, 0)),
+            "powerup": load_image("powerup", (0, 200, 200)),
         }
 
-        # add simple details
-        pygame.draw.circle(
-            assets["bomb"],
-            (150, 150, 150),
-            (TILE_SIZE // 2, TILE_SIZE // 2),
-            TILE_SIZE // 2,
-        )
-        pygame.draw.rect(assets["player1"], (0, 0, 0), assets["player1"].get_rect(), 2)
-        pygame.draw.rect(assets["player2"], (0, 0, 0), assets["player2"].get_rect(), 2)
-        pygame.draw.rect(assets["enemy"], (0, 0, 0), assets["enemy"].get_rect(), 2)
+        # add simple details to placeholders to keep the Matrix look
+        if placeholders.get("bomb"):
+            pygame.draw.circle(
+                assets["bomb"],
+                (150, 150, 150),
+                (TILE_SIZE // 2, TILE_SIZE // 2),
+                TILE_SIZE // 2,
+            )
+        if placeholders.get("player1"):
+            pygame.draw.rect(
+                assets["player1"], (0, 0, 0), assets["player1"].get_rect(), 2
+            )
+        if placeholders.get("player2"):
+            pygame.draw.rect(
+                assets["player2"], (0, 0, 0), assets["player2"].get_rect(), 2
+            )
+        if placeholders.get("enemy"):
+            pygame.draw.rect(assets["enemy"], (0, 0, 0), assets["enemy"].get_rect(), 2)
 
         return assets
 
