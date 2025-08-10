@@ -33,7 +33,12 @@ class Player:
     def rect(self) -> pygame.rect.Rect:
         return pygame.Rect(self.x * TILE_SIZE, self.y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
 
-    def handle_input(self, keys: pygame.key.ScancodeWrapper, level: Level) -> None:
+    def handle_input(
+        self,
+        keys: pygame.key.ScancodeWrapper,
+        level: Level,
+        bombs: list[Bomb],
+    ) -> None:
         dx = dy = 0
         if keys[self.controls.left]:
             dx = -1
@@ -45,11 +50,14 @@ class Player:
             dy = 1
         if dx or dy:
             nx, ny = self.x + dx, self.y + dy
-            if not level.is_blocked(nx, ny):
+            blocked = any(b.x == nx and b.y == ny for b in bombs)
+            if not level.is_blocked(nx, ny) and not blocked:
                 self.x, self.y = nx, ny
 
     def drop_bomb(self, bombs: list[Bomb], fuse_ms: int) -> None:
         if sum(1 for b in bombs if b.owner is self) >= self.max_bombs:
+            return
+        if any(b.x == self.x and b.y == self.y for b in bombs):
             return
         bombs.append(Bomb(self.x, self.y, fuse_ms, self.radius, owner=self))
 

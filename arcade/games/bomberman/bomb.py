@@ -21,8 +21,11 @@ class Bomb:
         self.timer -= dt
         return self.timer <= 0
 
-    def explode(self, level: Level) -> list[Explosion]:
+    def explode(self, level: Level) -> tuple[list[Explosion], list[tuple[int, int]]]:
+        """Create explosion tiles and return destroyed bricks."""
+
         tiles = [(self.x, self.y)]
+        destroyed: list[tuple[int, int]] = []
         dirs = [(-1, 0), (1, 0), (0, -1), (0, 1)]
         for dx, dy in dirs:
             for i in range(1, self.radius + 1):
@@ -31,9 +34,10 @@ class Bomb:
                     if level.grid[ny][nx] == BRICK:
                         level.destroy(nx, ny)
                         tiles.append((nx, ny))
+                        destroyed.append((nx, ny))
                     break
                 tiles.append((nx, ny))
-        return [Explosion(x, y) for x, y in tiles]
+        return [Explosion(x, y) for x, y in tiles], destroyed
 
     def draw(
         self, surface: pygame.surface.Surface, image: pygame.surface.Surface
