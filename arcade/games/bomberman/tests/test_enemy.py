@@ -1,5 +1,7 @@
+import pathlib
+import sys
+
 import pygame
-import pathlib, sys
 
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[4]))
 
