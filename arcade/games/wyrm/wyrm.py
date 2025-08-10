@@ -4,6 +4,9 @@ from typing import List, Set, Tuple
 import pygame
 
 from state import State
+from utils.persistence import load_json, save_json
+
+SETTINGS_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "settings.json")
 
 GRID_SIZE = 20
 NUM_SEGMENTS = 12
@@ -36,6 +39,18 @@ class WyrmGame(State):
         self.grid_w = 0
         self.grid_h = 0
         self.font: pygame.font.Font | None = None
+        self.big_font: pygame.font.Font | None = None
+        self.overlay: pygame.Surface | None = None
+        self.state = "play"
+        self.pause_options = [
+            "Resume",
+            "Volume -",
+            "Volume +",
+            "Fullscreen",
+            "Quit",
+        ]
+        self.pause_index = 0
+        self.settings: dict = {}
 
     def startup(self, screen: pygame.Surface, num_players: int = 1) -> None:
         super().startup(screen, num_players)
@@ -53,6 +68,7 @@ class WyrmGame(State):
         self.lives2 = 3
         self.move_delay = MOVE_DELAY
         self.font = pygame.font.SysFont("Courier", 20)
+        self.big_font = pygame.font.SysFont("Courier", 32)
         base = os.path.join(os.path.dirname(__file__), "assets")
         try:
             self.segment_img = pygame.image.load(
@@ -64,12 +80,59 @@ class WyrmGame(State):
             self.shot_sound = pygame.mixer.Sound(os.path.join(base, "shot.wav"))
         except Exception:
             self.shot_sound = None
+        self.settings = load_json(
+            SETTINGS_PATH,
+            {
+                "window_size": [800, 600],
+                "fullscreen": False,
+                "sound_volume": 1.0,
+                "keybindings": {},
+            },
+        )
+        pygame.mixer.music.set_volume(self.settings.get("sound_volume", 1.0))
+        self.overlay = pygame.Surface(self.screen.get_size(), pygame.SRCALPHA)
+        self.state = "play"
+        self.pause_index = 0
 
     def handle_keyboard(self, event: pygame.event.Event) -> None:
+        if self.state == "pause":
+            if event.type == pygame.KEYDOWN:
+                if event.key in (pygame.K_UP, pygame.K_w):
+                    self.pause_index = (self.pause_index - 1) % len(self.pause_options)
+                elif event.key in (pygame.K_DOWN, pygame.K_s):
+                    self.pause_index = (self.pause_index + 1) % len(self.pause_options)
+                elif event.key == pygame.K_RETURN:
+                    choice = self.pause_options[self.pause_index]
+                    if choice == "Resume":
+                        self.state = "play"
+                    elif choice == "Quit":
+                        self.done = True
+                        self.next = "menu"
+                    elif choice == "Fullscreen":
+                        pygame.display.toggle_fullscreen()
+                        self.settings["fullscreen"] = not self.settings.get(
+                            "fullscreen", False
+                        )
+                        save_json(SETTINGS_PATH, self.settings)
+                    elif choice == "Volume +":
+                        vol = min(1.0, self.settings.get("sound_volume", 1.0) + 0.1)
+                        self.settings["sound_volume"] = round(vol, 2)
+                        pygame.mixer.music.set_volume(vol)
+                        save_json(SETTINGS_PATH, self.settings)
+                    elif choice == "Volume -":
+                        vol = max(0.0, self.settings.get("sound_volume", 1.0) - 0.1)
+                        self.settings["sound_volume"] = round(vol, 2)
+                        pygame.mixer.music.set_volume(vol)
+                        save_json(SETTINGS_PATH, self.settings)
+                elif event.key == pygame.K_ESCAPE:
+                    self.state = "play"
+            return
+
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
-                self.done = True
-                self.next = "menu"
+                self.state = "pause"
+                self.pause_index = 0
+                return
 
             # Player 1 controls (arrows + space)
             if event.key == pygame.K_LEFT:
@@ -103,10 +166,51 @@ class WyrmGame(State):
                         self.shot_sound.play()
 
     def handle_gamepad(self, event: pygame.event.Event) -> None:
+        if self.state == "pause":
+            if event.type in (pygame.JOYAXISMOTION, pygame.JOYHATMOTION):
+                if event.type == pygame.JOYHATMOTION:
+                    _, y = event.value
+                    vert = -y
+                else:
+                    if event.axis != 1:
+                        return
+                    vert = event.value
+                if vert < -0.5 or vert == -1:
+                    self.pause_index = (self.pause_index - 1) % len(self.pause_options)
+                elif vert > 0.5 or vert == 1:
+                    self.pause_index = (self.pause_index + 1) % len(self.pause_options)
+            elif event.type == pygame.JOYBUTTONDOWN:
+                if event.button == 0:
+                    choice = self.pause_options[self.pause_index]
+                    if choice == "Resume":
+                        self.state = "play"
+                    elif choice == "Quit":
+                        self.done = True
+                        self.next = "menu"
+                    elif choice == "Fullscreen":
+                        pygame.display.toggle_fullscreen()
+                        self.settings["fullscreen"] = not self.settings.get(
+                            "fullscreen", False
+                        )
+                        save_json(SETTINGS_PATH, self.settings)
+                    elif choice == "Volume +":
+                        vol = min(1.0, self.settings.get("sound_volume", 1.0) + 0.1)
+                        self.settings["sound_volume"] = round(vol, 2)
+                        pygame.mixer.music.set_volume(vol)
+                        save_json(SETTINGS_PATH, self.settings)
+                    elif choice == "Volume -":
+                        vol = max(0.0, self.settings.get("sound_volume", 1.0) - 0.1)
+                        self.settings["sound_volume"] = round(vol, 2)
+                        pygame.mixer.music.set_volume(vol)
+                        save_json(SETTINGS_PATH, self.settings)
+                elif event.button in (1, 7, 9):
+                    self.state = "play"
+            return
+
         if event.type == pygame.JOYBUTTONDOWN:
             if event.button == 7:
-                self.done = True
-                self.next = "menu"
+                self.state = "pause"
+                self.pause_index = 0
             elif event.button == 0:
                 self.bullets.append([self.player1[0], self.player1[1] - 1, 1])
                 if self.shot_sound:
@@ -136,6 +240,11 @@ class WyrmGame(State):
                 self.player1[1] = min(self.grid_h - 1, self.player1[1] + 1)
 
     def update(self, dt: float) -> None:
+        if self.state != "play":
+            if self.state == "pause":
+                pygame.mixer.music.set_volume(self.settings.get("sound_volume", 1.0))
+            return
+
         self.move_timer += dt
         if self.move_timer >= self.move_delay:
             self.move_timer = 0.0
@@ -278,6 +387,20 @@ class WyrmGame(State):
                     text2,
                     (self.screen.get_width() - text2.get_width() - 5, 5),
                 )
+        if self.state == "pause" and self.overlay and self.big_font:
+            self.overlay.fill((0, 0, 0, 200))
+            self.screen.blit(self.overlay, (0, 0))
+            for i, option in enumerate(self.pause_options):
+                color = (0, 255, 0) if i == self.pause_index else (0, 155, 0)
+                prefix = "> " if i == self.pause_index else "  "
+                text = self.big_font.render(prefix + option, True, color)
+                rect = text.get_rect(
+                    center=(
+                        self.screen.get_width() // 2,
+                        self.screen.get_height() // 2 + i * 40,
+                    )
+                )
+                self.screen.blit(text, rect)
 
     def game_over(self, name: str) -> None:
         from high_scores import save_score
