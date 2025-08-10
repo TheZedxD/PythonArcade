@@ -3,5 +3,7 @@
   "enemy_count": 3,
   "fuse_ms": 2000,
   "base_blast_radius": 2,
-  "max_bombs_per_player": 1
+  "max_bombs_per_player": 1,
+  "max_blast_radius": 5,
+  "powerup_chance": 0.2
 }

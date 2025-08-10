@@ -49,9 +49,13 @@ class Level:
             return True
         return self.grid[y][x] in (WALL, BRICK)
 
-    def destroy(self, x: int, y: int) -> None:
+    def destroy(self, x: int, y: int) -> bool:
+        """Remove a brick tile and return True if destroyed."""
+
         if self.grid[y][x] == BRICK:
             self.grid[y][x] = EMPTY
+            return True
+        return False
 
     def draw(
         self, surface: pygame.surface.Surface, assets: dict[str, pygame.surface.Surface]

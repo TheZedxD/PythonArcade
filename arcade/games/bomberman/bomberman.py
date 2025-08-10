@@ -16,6 +16,7 @@ from .player import Player, Controls
 from .enemy import Enemy
 from .bomb import Bomb
 from .explosion import Explosion
+from .powerups import PowerUp
 
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "config.json")
 SETTINGS_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "settings.json")
@@ -25,6 +26,8 @@ DEFAULT_CONFIG = {
     "fuse_ms": 2000,
     "base_blast_radius": 2,
     "max_bombs_per_player": 1,
+    "max_blast_radius": 5,
+    "powerup_chance": 0.2,
 }
 
 
@@ -54,6 +57,8 @@ class BombermanGame(State):
             bomb=pygame.K_SPACE,
         )
         self.players.append(Player(1, 1, p1_controls, self.assets["player1"]))
+        self.players[0].radius = self.config.get("base_blast_radius", 2)
+        self.players[0].max_bombs = self.config.get("max_bombs_per_player", 1)
         if self.num_players == 2:
             p2_controls = Controls(
                 up=pygame.K_w,
@@ -62,17 +67,19 @@ class BombermanGame(State):
                 right=pygame.K_d,
                 bomb=pygame.K_LSHIFT,
             )
-            self.players.append(
-                Player(
-                    self.level.width - 2,
-                    self.level.height - 2,
-                    p2_controls,
-                    self.assets["player2"],
-                )
+            p2 = Player(
+                self.level.width - 2,
+                self.level.height - 2,
+                p2_controls,
+                self.assets["player2"],
             )
+            p2.radius = self.config.get("base_blast_radius", 2)
+            p2.max_bombs = self.config.get("max_bombs_per_player", 1)
+            self.players.append(p2)
         self.enemies = self._spawn_enemies()
         self.bombs: list[Bomb] = []
         self.explosions: list[Explosion] = []
+        self.powerups: list[PowerUp] = []
         self.pause_menu = PauseMenu(["Resume", "Return to Menu"], font_size=32)
         self.state = "play"
         self.game_timer = 0.0
@@ -125,6 +132,37 @@ class BombermanGame(State):
                 break
         return enemies
 
+    def _spawn_powerups(self, tiles: list[tuple[int, int]]) -> None:
+        """Randomly create power-ups on destroyed brick tiles."""
+
+        chance = self.config.get("powerup_chance", 0.0)
+        for x, y in tiles:
+            if random.random() < chance:
+                self.powerups.append(PowerUp(x, y, "radius", self.assets["powerup"]))
+
+    def _check_deaths(self) -> None:
+        """Remove players or enemies caught in explosions."""
+
+        tiles = {(e.x, e.y) for e in self.explosions}
+        for player in list(self.players):
+            if (player.x, player.y) in tiles:
+                self.players.remove(player)
+        for enemy in list(self.enemies):
+            if (enemy.x, enemy.y) in tiles:
+                self.enemies.remove(enemy)
+
+    def _collect_powerups(self) -> None:
+        """Check for player collisions with power-ups."""
+
+        max_radius = self.config.get("max_blast_radius", 5)
+        for powerup in list(self.powerups):
+            for player in self.players:
+                if player.x == powerup.x and player.y == powerup.y:
+                    if powerup.kind == "radius":
+                        player.radius = min(player.radius + 1, max_radius)
+                    self.powerups.remove(powerup)
+                    break
+
     # ------------------------------------------------------------------ events
     def handle_keyboard(self, event: pygame.event.Event) -> None:
         if self.state == "play":
@@ -160,21 +198,31 @@ class BombermanGame(State):
         self.game_timer += dt
         keys = pygame.key.get_pressed()
         for player in self.players:
-            player.handle_input(keys, self.level)
+            player.handle_input(keys, self.level, self.bombs)
         for enemy in self.enemies:
-            enemy.update(dt, self.level)
+            enemy.update(dt, self.level, self.bombs)
         for bomb in list(self.bombs):
             if bomb.update(dt):
-                self.explosions.extend(bomb.explode(self.level))
+                explosions, destroyed = bomb.explode(self.level)
+                self.explosions.extend(explosions)
+                self._spawn_powerups(destroyed)
                 self.bombs.remove(bomb)
         for expl in list(self.explosions):
             if expl.update(dt):
                 self.explosions.remove(expl)
+        self._check_deaths()
+        self._collect_powerups()
+        if self.num_players == 1 and not self.players:
+            self.done = True
+        if self.num_players == 2 and len(self.players) <= 1:
+            self.done = True
+        if not self.enemies:
+            self.done = True
 
     # ------------------------------------------------------------------ draw
     def draw(self) -> None:
         self.level.draw(self.screen, self.assets)
-        for powerup in []:  # power-ups not yet generated
+        for powerup in self.powerups:
             powerup.draw(self.screen)
         for bomb in self.bombs:
             bomb.draw(self.screen, self.assets["bomb"])
