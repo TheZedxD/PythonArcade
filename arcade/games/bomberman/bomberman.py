@@ -8,7 +8,7 @@ import pygame
 
 from state import State
 from utils.persistence import load_json
-from common.theme import PRIMARY_COLOR, draw_text, terminal_panel
+from common.theme import ACCENT_COLOR, PRIMARY_COLOR, draw_text, terminal_panel
 from common.ui import PauseMenu
 
 from .level import Level, TILE_SIZE
@@ -48,11 +48,34 @@ class BombermanGame(State):
         )
         self.assets = self._load_assets()
         self.pause_menu = PauseMenu(["Resume", "Return to Menu"], font_size=32)
-        self.mode_menu = PauseMenu(["Single Player", "Two Player"], font_size=32)
-        self.victory_menu = PauseMenu(["Restart", "Menu"], font_size=32)
+        self.victory_menu = PauseMenu(["Restart", "Return to Menu"], font_size=32)
         self.overlay = pygame.Surface(self.screen.get_size(), pygame.SRCALPHA)
         self.enemy_speed = self.config.get("enemy_speed", 0.5)
-        self.state = "mode_select"
+        # settings screen options
+        self.settings_options = [
+            "Mode",
+            "Map Size",
+            "Enemy Count",
+            "Bomb Fuse",
+            "Max Bombs",
+            "Audio",
+            "Start",
+            "Back",
+        ]
+        self.settings_index = 0
+        self.mode = 1
+        self.map_sizes = [
+            ("Small", (13, 11)),
+            ("Medium", (15, 13)),
+            ("Large", (17, 15)),
+        ]
+        self.map_size_index = 1
+        self.enemy_count = self.config.get("enemy_count", 3)
+        self.fuse_ms = self.config.get("fuse_ms", 2000)
+        self.max_bombs = self.config.get("max_bombs_per_player", 1)
+        self.audio_on = True
+        self.prev_volume = self.settings.get("sound_volume", 1.0)
+        self.state = "settings"
         self.winner = 0
         self.level: Level | None = None
         self.players: list[Player] = []
@@ -209,17 +232,70 @@ class BombermanGame(State):
         if self.time_limit > 0:
             self.time_left = float(self.time_limit)
 
+    def _option_value(self, option: str) -> str:
+        if option == "Mode":
+            return "1P" if self.mode == 1 else "2P"
+        if option == "Map Size":
+            return self.map_sizes[self.map_size_index][0]
+        if option == "Enemy Count":
+            return str(self.enemy_count) if self.mode == 1 else "N/A"
+        if option == "Bomb Fuse":
+            return f"{self.fuse_ms} ms"
+        if option == "Max Bombs":
+            return str(self.max_bombs)
+        if option == "Audio":
+            return "On" if self.audio_on else "Off"
+        return ""
+
+    def _adjust(self, delta: int) -> None:
+        option = self.settings_options[self.settings_index]
+        if option == "Mode":
+            self.mode = 1 if self.mode == 2 else 2
+        elif option == "Map Size":
+            self.map_size_index = (self.map_size_index + delta) % len(self.map_sizes)
+        elif option == "Enemy Count" and self.mode == 1:
+            self.enemy_count = max(0, min(9, self.enemy_count + delta))
+        elif option == "Bomb Fuse":
+            self.fuse_ms = max(500, min(5000, self.fuse_ms + delta * 500))
+        elif option == "Max Bombs":
+            self.max_bombs = max(1, min(9, self.max_bombs + delta))
+        elif option == "Audio" and delta != 0:
+            self.audio_on = not self.audio_on
+
+    def _apply_settings(self) -> None:
+        self.config["map_size"] = list(self.map_sizes[self.map_size_index][1])
+        self.config["enemy_count"] = self.enemy_count if self.mode == 1 else 0
+        self.config["fuse_ms"] = self.fuse_ms
+        self.config["max_bombs_per_player"] = self.max_bombs
+        pygame.mixer.music.set_volume(self.prev_volume if self.audio_on else 0)
+
     # ------------------------------------------------------------------ events
     def handle_keyboard(self, event: pygame.event.Event) -> None:
-        if self.state == "mode_select":
-            choice = self.mode_menu.handle_keyboard(event)
-            if choice == "Single Player":
-                self._start_game(1)
-            elif choice == "Two Player":
-                self._start_game(2)
-            elif choice == "Resume":
-                self.done = True
-                self.next = "menu"
+        if self.state == "settings":
+            if event.type == pygame.KEYDOWN:
+                if event.key in (pygame.K_DOWN, pygame.K_s):
+                    self.settings_index = (self.settings_index + 1) % len(
+                        self.settings_options
+                    )
+                elif event.key in (pygame.K_UP, pygame.K_w):
+                    self.settings_index = (self.settings_index - 1) % len(
+                        self.settings_options
+                    )
+                elif event.key in (pygame.K_LEFT, pygame.K_a):
+                    self._adjust(-1)
+                elif event.key in (pygame.K_RIGHT, pygame.K_d):
+                    self._adjust(1)
+                elif event.key == pygame.K_RETURN:
+                    option = self.settings_options[self.settings_index]
+                    if option == "Start":
+                        self._apply_settings()
+                        self._start_game(self.mode)
+                    elif option in ("Back", "Menu"):
+                        self.done = True
+                        self.next = "menu"
+                elif event.key == pygame.K_ESCAPE:
+                    self.done = True
+                    self.next = "menu"
         elif self.state == "play":
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
@@ -239,8 +315,9 @@ class BombermanGame(State):
             choice = self.victory_menu.handle_keyboard(event)
             if choice == "Restart":
                 self._start_game(self.num_players)
-            elif choice in ("Menu", "Resume"):
-                self.state = "mode_select"
+            elif choice == "Return to Menu":
+                self.done = True
+                self.next = "menu"
 
     def handle_gamepad(
         self, event: pygame.event.Event
@@ -254,7 +331,7 @@ class BombermanGame(State):
 
     # ------------------------------------------------------------------ update
     def update(self, dt: float) -> None:
-        if self.state in ("pause", "mode_select", "victory"):
+        if self.state in ("pause", "settings", "victory"):
             return
         if self.state in ("cleared", "defeat"):
             self.end_timer -= dt
@@ -310,19 +387,33 @@ class BombermanGame(State):
 
     # ------------------------------------------------------------------ draw
     def draw(self) -> None:
-        if self.state == "mode_select":
+        if self.state == "settings":
             self.screen.fill((0, 0, 0))
             rect = self.screen.get_rect().inflate(-200, -200)
             terminal_panel(self.screen, rect)
             draw_text(
                 self.screen,
-                "SELECT MODE",
+                "BOMBERMAN SETTINGS",
                 (rect.centerx, rect.top + 40),
                 32,
                 PRIMARY_COLOR,
                 center=True,
             )
-            self.mode_menu.draw(self.screen)
+            for i, option in enumerate(self.settings_options):
+                color = PRIMARY_COLOR if i == self.settings_index else ACCENT_COLOR
+                prefix = "> " if i == self.settings_index else "  "
+                value = self._option_value(option)
+                text = f"{prefix}{option}"
+                if value:
+                    text += f": {value}"
+                draw_text(
+                    self.screen,
+                    text,
+                    (rect.centerx, rect.top + 80 + i * 40),
+                    24,
+                    color,
+                    center=True,
+                )
             return
 
         self.level.draw(self.screen, self.assets)
@@ -395,6 +486,16 @@ class BombermanGame(State):
             )
             self.victory_menu.draw(self.overlay)
             self.screen.blit(self.overlay, (0, 0))
+
+    def cleanup(self) -> None:
+        pygame.mixer.music.set_volume(self.prev_volume)
+        self.level = None
+        self.players.clear()
+        self.enemies.clear()
+        self.bombs.clear()
+        self.explosions.clear()
+        self.powerups.clear()
+        self.state = "settings"
 
 
 def run() -> None:

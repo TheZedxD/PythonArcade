@@ -41,6 +41,8 @@ menu lets you switch window mode and adjust master volume. Changes persist to
   persistent high score tracking.
 * **Wyrm** – Centipede-like shooter with splitting segments and rune blocks.
 * **Virus** – Dr. Mario-inspired pill matcher dressed in Matrix aesthetics.
+* **Bomberman (Matrix)** – grid-based bomb-dropper. Arrow keys/WASD to move,
+  Space/Left Shift to plant bombs.
 
 ## Adding games
 
