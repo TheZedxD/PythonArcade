@@ -148,7 +148,12 @@ class MainMenuState(State):
                         self.done = True
                     else:
                         self.selected_game = choice
-                        self.phase = "players"
+                        if choice == "bomberman":
+                            self.game_options = {}
+                            self.next = choice
+                            self.done = True
+                        else:
+                            self.phase = "players"
         elif self.phase == "players":
             if event.type == pygame.KEYDOWN:
                 if event.key in (pygame.K_1, pygame.K_KP1):
@@ -191,7 +196,12 @@ class MainMenuState(State):
                         self.done = True
                     else:
                         self.selected_game = choice
-                        self.phase = "players"
+                        if choice == "bomberman":
+                            self.game_options = {}
+                            self.next = choice
+                            self.done = True
+                        else:
+                            self.phase = "players"
                 elif event.button in (1, 9):
                     self.quit = True
             elif event.type in (pygame.JOYAXISMOTION, pygame.JOYHATMOTION):
