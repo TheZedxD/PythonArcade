@@ -1,9 +1,11 @@
 {
   "map_size": [15, 13],
   "enemy_count": 3,
+  "enemy_speed": 0.5,
   "fuse_ms": 2000,
   "base_blast_radius": 2,
   "max_bombs_per_player": 1,
   "max_blast_radius": 5,
-  "powerup_chance": 0.2
+  "powerup_chance": 0.2,
+  "time_limit": 0
 }

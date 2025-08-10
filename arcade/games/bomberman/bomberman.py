@@ -47,7 +47,8 @@ class BombermanGame(State):
             },
         )
         self.assets = self._load_assets()
-        self.level = Level(tuple(self.config.get("map_size", [15, 13])))
+        width, height = self.config.get("map_size", [15, 13])
+        self.level = Level.generate_random(width, height)
         self.players: list[Player] = []
         p1_controls = Controls(
             up=pygame.K_UP,
@@ -76,6 +77,7 @@ class BombermanGame(State):
             p2.radius = self.config.get("base_blast_radius", 2)
             p2.max_bombs = self.config.get("max_bombs_per_player", 1)
             self.players.append(p2)
+        self.enemy_speed = self.config.get("enemy_speed", 0.5)
         self.enemies = self._spawn_enemies()
         self.bombs: list[Bomb] = []
         self.explosions: list[Explosion] = []
@@ -83,6 +85,9 @@ class BombermanGame(State):
         self.pause_menu = PauseMenu(["Resume", "Return to Menu"], font_size=32)
         self.state = "play"
         self.game_timer = 0.0
+        self.time_limit = self.config.get("time_limit", 0)
+        self.time_left = float(self.time_limit)
+        self.end_timer = 0.0
         self.overlay = pygame.Surface(self.screen.get_size(), pygame.SRCALPHA)
 
     # ------------------------------------------------------------------ utils
@@ -128,7 +133,7 @@ class BombermanGame(State):
                     continue
                 if (x, y) in [(p.x, p.y) for p in self.players]:
                     continue
-                enemies.append(Enemy(x, y, self.assets["enemy"]))
+                enemies.append(Enemy(x, y, self.assets["enemy"], self.enemy_speed))
                 break
         return enemies
 
@@ -141,15 +146,12 @@ class BombermanGame(State):
                 self.powerups.append(PowerUp(x, y, "radius", self.assets["powerup"]))
 
     def _check_deaths(self) -> None:
-        """Remove players or enemies caught in explosions."""
+        """Remove players caught in explosions."""
 
         tiles = {(e.x, e.y) for e in self.explosions}
         for player in list(self.players):
             if (player.x, player.y) in tiles:
                 self.players.remove(player)
-        for enemy in list(self.enemies):
-            if (enemy.x, enemy.y) in tiles:
-                self.enemies.remove(enemy)
 
     def _collect_powerups(self) -> None:
         """Check for player collisions with power-ups."""
@@ -162,6 +164,25 @@ class BombermanGame(State):
                         player.radius = min(player.radius + 1, max_radius)
                     self.powerups.remove(powerup)
                     break
+
+    def _next_level(self) -> None:
+        """Regenerate level and respawn enemies for single-player progression."""
+
+        width, height = self.config.get("map_size", [15, 13])
+        self.level = Level.generate_random(width, height)
+        self.bombs.clear()
+        self.explosions.clear()
+        self.powerups.clear()
+        for i, player in enumerate(self.players):
+            if i == 0:
+                player.x, player.y = 1, 1
+            else:
+                player.x, player.y = self.level.width - 2, self.level.height - 2
+        self.enemies = self._spawn_enemies()
+        self.state = "play"
+        self.game_timer = 0.0
+        if self.time_limit > 0:
+            self.time_left = float(self.time_limit)
 
     # ------------------------------------------------------------------ events
     def handle_keyboard(self, event: pygame.event.Event) -> None:
@@ -193,14 +214,32 @@ class BombermanGame(State):
 
     # ------------------------------------------------------------------ update
     def update(self, dt: float) -> None:
-        if self.state != "play":
+        if self.state == "pause":
             return
-        self.game_timer += dt
+        if self.state in ("cleared", "defeat"):
+            self.end_timer -= dt
+            if self.end_timer <= 0:
+                if self.state == "cleared":
+                    self._next_level()
+                else:
+                    self.done = True
+                    self.next = "menu"
+            return
+        # play state
+        if self.time_limit > 0:
+            self.time_left -= dt
+            if self.time_left <= 0:
+                self.state = "defeat"
+                self.end_timer = 2.0
+                return
+        else:
+            self.game_timer += dt
         keys = pygame.key.get_pressed()
         for player in self.players:
             player.handle_input(keys, self.level, self.bombs)
-        for enemy in self.enemies:
-            enemy.update(dt, self.level, self.bombs)
+        for enemy in list(self.enemies):
+            if not enemy.update(dt, self.level, self.bombs, self.explosions):
+                self.enemies.remove(enemy)
         for bomb in list(self.bombs):
             if bomb.update(dt):
                 explosions, destroyed = bomb.explode(self.level)
@@ -213,11 +252,14 @@ class BombermanGame(State):
         self._check_deaths()
         self._collect_powerups()
         if self.num_players == 1 and not self.players:
-            self.done = True
+            self.state = "defeat"
+            self.end_timer = 2.0
         if self.num_players == 2 and len(self.players) <= 1:
-            self.done = True
+            self.state = "defeat"
+            self.end_timer = 2.0
         if not self.enemies:
-            self.done = True
+            self.state = "cleared"
+            self.end_timer = 2.0
 
     # ------------------------------------------------------------------ draw
     def draw(self) -> None:
@@ -243,16 +285,37 @@ class BombermanGame(State):
             PRIMARY_COLOR,
         )
         if self.num_players == 1:
-            draw_text(
-                self.screen,
-                f"Time: {self.game_timer:0.1f}",
-                (10, 70),
-                24,
-                PRIMARY_COLOR,
-            )
+            if self.time_limit > 0:
+                draw_text(
+                    self.screen,
+                    f"Time: {int(self.time_left)}",
+                    (10, 70),
+                    24,
+                    PRIMARY_COLOR,
+                )
+            else:
+                draw_text(
+                    self.screen,
+                    f"Time: {self.game_timer:0.1f}",
+                    (10, 70),
+                    24,
+                    PRIMARY_COLOR,
+                )
         if self.state == "pause":
             self.overlay.fill((0, 0, 0, 200))
             self.pause_menu.draw(self.overlay)
+            self.screen.blit(self.overlay, (0, 0))
+        elif self.state in ("cleared", "defeat"):
+            self.overlay.fill((0, 0, 0, 200))
+            text = "CLEARED" if self.state == "cleared" else "DEFEAT"
+            draw_text(
+                self.overlay,
+                text,
+                (self.screen.get_width() // 2, self.screen.get_height() // 2),
+                48,
+                PRIMARY_COLOR,
+                center=True,
+            )
             self.screen.blit(self.overlay, (0, 0))
 
 
