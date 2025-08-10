@@ -5,6 +5,12 @@ import json
 import math
 import pygame
 from state import State
+from common.theme import (
+    ACCENT_COLOR,
+    BG_COLOR,
+    PRIMARY_COLOR,
+    get_font,
+)
 
 
 class MainMenuState(State):
@@ -17,9 +23,9 @@ class MainMenuState(State):
         self.font = None
         self.title_font = None
         self.rain_font = None
-        self.normal_color = (0, 155, 0)
-        self.highlight_color = (0, 255, 0)
-        self.bg_color = (0, 0, 0)
+        self.normal_color = ACCENT_COLOR
+        self.highlight_color = PRIMARY_COLOR
+        self.bg_color = BG_COLOR
         self.rain_glyphs = []
         self.rain_chars = string.ascii_letters + string.digits
         self.rain_surfaces = {}
@@ -40,9 +46,9 @@ class MainMenuState(State):
         super().startup(screen, num_players)
         self.num_players = 1
         self.game_options = {}
-        self.font = pygame.font.SysFont("Courier", 32)
-        self.title_font = pygame.font.SysFont("Courier", 48, bold=True)
-        self.rain_font = pygame.font.SysFont("Courier", 20)
+        self.font = get_font(32)
+        self.title_font = get_font(48, bold=True)
+        self.rain_font = get_font(20)
         base_dir = os.path.join(os.path.dirname(__file__), "games")
         entries = []
         for name in os.listdir(base_dir):
@@ -120,7 +126,7 @@ class MainMenuState(State):
             center=(width // 2, height // 2)
         )
         self.title_base = self.title_font.render(
-            "ARCADE TERMINAL", True, (0, 200, 0)
+            "ARCADE TERMINAL", True, PRIMARY_COLOR
         ).convert_alpha()
         self.title_rect = self.title_base.get_rect(center=(width // 2, height // 5))
 
