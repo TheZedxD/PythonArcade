@@ -8,7 +8,7 @@ import pygame
 
 from state import State
 from utils.persistence import load_json
-from common.theme import PRIMARY_COLOR, draw_text
+from common.theme import PRIMARY_COLOR, draw_text, terminal_panel
 from common.ui import PauseMenu
 
 from .level import Level, TILE_SIZE
@@ -47,48 +47,25 @@ class BombermanGame(State):
             },
         )
         self.assets = self._load_assets()
-        width, height = self.config.get("map_size", [15, 13])
-        self.level = Level.generate_random(width, height)
-        self.players: list[Player] = []
-        p1_controls = Controls(
-            up=pygame.K_UP,
-            down=pygame.K_DOWN,
-            left=pygame.K_LEFT,
-            right=pygame.K_RIGHT,
-            bomb=pygame.K_SPACE,
-        )
-        self.players.append(Player(1, 1, p1_controls, self.assets["player1"]))
-        self.players[0].radius = self.config.get("base_blast_radius", 2)
-        self.players[0].max_bombs = self.config.get("max_bombs_per_player", 1)
-        if self.num_players == 2:
-            p2_controls = Controls(
-                up=pygame.K_w,
-                down=pygame.K_s,
-                left=pygame.K_a,
-                right=pygame.K_d,
-                bomb=pygame.K_LSHIFT,
-            )
-            p2 = Player(
-                self.level.width - 2,
-                self.level.height - 2,
-                p2_controls,
-                self.assets["player2"],
-            )
-            p2.radius = self.config.get("base_blast_radius", 2)
-            p2.max_bombs = self.config.get("max_bombs_per_player", 1)
-            self.players.append(p2)
+        self.pause_menu = PauseMenu(["Resume", "Return to Menu"], font_size=32)
+        self.mode_menu = PauseMenu(["Single Player", "Two Player"], font_size=32)
+        self.victory_menu = PauseMenu(["Restart", "Menu"], font_size=32)
+        self.overlay = pygame.Surface(self.screen.get_size(), pygame.SRCALPHA)
         self.enemy_speed = self.config.get("enemy_speed", 0.5)
-        self.enemies = self._spawn_enemies()
+        self.state = "mode_select"
+        self.winner = 0
+        self.level: Level | None = None
+        self.players: list[Player] = []
+        self.p1: Player | None = None
+        self.p2: Player | None = None
+        self.enemies: list[Enemy] = []
         self.bombs: list[Bomb] = []
         self.explosions: list[Explosion] = []
         self.powerups: list[PowerUp] = []
-        self.pause_menu = PauseMenu(["Resume", "Return to Menu"], font_size=32)
-        self.state = "play"
         self.game_timer = 0.0
         self.time_limit = self.config.get("time_limit", 0)
         self.time_left = float(self.time_limit)
         self.end_timer = 0.0
-        self.overlay = pygame.Surface(self.screen.get_size(), pygame.SRCALPHA)
 
     # ------------------------------------------------------------------ utils
     def _load_assets(self) -> dict[str, pygame.surface.Surface]:
@@ -122,6 +99,54 @@ class BombermanGame(State):
         pygame.draw.rect(assets["enemy"], (0, 0, 0), assets["enemy"].get_rect(), 2)
 
         return assets
+
+    def _start_game(self, num_players: int) -> None:
+        """Initialise a new round."""
+
+        width, height = self.config.get("map_size", [15, 13])
+        self.level = Level.generate_random(width, height)
+        self.players = []
+        self.bombs = []
+        self.explosions = []
+        self.powerups = []
+        self.num_players = num_players
+        p1_controls = Controls(
+            up=pygame.K_UP,
+            down=pygame.K_DOWN,
+            left=pygame.K_LEFT,
+            right=pygame.K_RIGHT,
+            bomb=pygame.K_SPACE,
+        )
+        self.p1 = Player(1, 1, p1_controls, self.assets["player1"])
+        self.p1.radius = self.config.get("base_blast_radius", 2)
+        self.p1.max_bombs = self.config.get("max_bombs_per_player", 1)
+        self.players.append(self.p1)
+        if num_players == 2:
+            p2_controls = Controls(
+                up=pygame.K_w,
+                down=pygame.K_s,
+                left=pygame.K_a,
+                right=pygame.K_d,
+                bomb=pygame.K_LSHIFT,
+            )
+            self.p2 = Player(
+                self.level.width - 2,
+                self.level.height - 2,
+                p2_controls,
+                self.assets["player2"],
+            )
+            self.p2.radius = self.config.get("base_blast_radius", 2)
+            self.p2.max_bombs = self.config.get("max_bombs_per_player", 1)
+            self.players.append(self.p2)
+            self.enemies = []
+        else:
+            self.p2 = None
+            self.enemies = self._spawn_enemies()
+        self.game_timer = 0.0
+        self.time_limit = 0 if num_players == 2 else self.config.get("time_limit", 0)
+        if self.time_limit > 0:
+            self.time_left = float(self.time_limit)
+        self.state = "play"
 
     def _spawn_enemies(self) -> list[Enemy]:
         enemies: list[Enemy] = []
@@ -186,7 +211,16 @@ class BombermanGame(State):
 
     # ------------------------------------------------------------------ events
     def handle_keyboard(self, event: pygame.event.Event) -> None:
-        if self.state == "play":
+        if self.state == "mode_select":
+            choice = self.mode_menu.handle_keyboard(event)
+            if choice == "Single Player":
+                self._start_game(1)
+            elif choice == "Two Player":
+                self._start_game(2)
+            elif choice == "Resume":
+                self.done = True
+                self.next = "menu"
+        elif self.state == "play":
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     self.state = "pause"
@@ -201,6 +235,12 @@ class BombermanGame(State):
             elif choice == "Return to Menu":
                 self.done = True
                 self.next = "menu"
+        elif self.state == "victory":
+            choice = self.victory_menu.handle_keyboard(event)
+            if choice == "Restart":
+                self._start_game(self.num_players)
+            elif choice in ("Menu", "Resume"):
+                self.state = "mode_select"
 
     def handle_gamepad(
         self, event: pygame.event.Event
@@ -214,7 +254,7 @@ class BombermanGame(State):
 
     # ------------------------------------------------------------------ update
     def update(self, dt: float) -> None:
-        if self.state == "pause":
+        if self.state in ("pause", "mode_select", "victory"):
             return
         if self.state in ("cleared", "defeat"):
             self.end_timer -= dt
@@ -251,18 +291,40 @@ class BombermanGame(State):
                 self.explosions.remove(expl)
         self._check_deaths()
         self._collect_powerups()
-        if self.num_players == 1 and not self.players:
-            self.state = "defeat"
-            self.end_timer = 2.0
-        if self.num_players == 2 and len(self.players) <= 1:
-            self.state = "defeat"
-            self.end_timer = 2.0
-        if not self.enemies:
-            self.state = "cleared"
-            self.end_timer = 2.0
+        if self.num_players == 1:
+            if not self.players:
+                self.state = "defeat"
+                self.end_timer = 2.0
+            elif not self.enemies:
+                self.state = "cleared"
+                self.end_timer = 2.0
+        else:
+            if len(self.players) == 1:
+                self.winner = 1 if self.players[0] is self.p1 else 2
+                self.state = "victory"
+                self.victory_menu.index = 0
+            elif len(self.players) == 0:
+                self.winner = 0
+                self.state = "victory"
+                self.victory_menu.index = 0
 
     # ------------------------------------------------------------------ draw
     def draw(self) -> None:
+        if self.state == "mode_select":
+            self.screen.fill((0, 0, 0))
+            rect = self.screen.get_rect().inflate(-200, -200)
+            terminal_panel(self.screen, rect)
+            draw_text(
+                self.screen,
+                "SELECT MODE",
+                (rect.centerx, rect.top + 40),
+                32,
+                PRIMARY_COLOR,
+                center=True,
+            )
+            self.mode_menu.draw(self.screen)
+            return
+
         self.level.draw(self.screen, self.assets)
         for powerup in self.powerups:
             powerup.draw(self.screen)
@@ -277,14 +339,14 @@ class BombermanGame(State):
         # HUD
         mode_text = f"{'1P' if self.num_players == 1 else '2P'} Mode"
         draw_text(self.screen, mode_text, (10, 10), 24, PRIMARY_COLOR)
-        draw_text(
-            self.screen,
-            f"Enemies: {len(self.enemies)}",
-            (10, 40),
-            24,
-            PRIMARY_COLOR,
-        )
         if self.num_players == 1:
+            draw_text(
+                self.screen,
+                f"Enemies: {len(self.enemies)}",
+                (10, 40),
+                24,
+                PRIMARY_COLOR,
+            )
             if self.time_limit > 0:
                 draw_text(
                     self.screen,
@@ -316,6 +378,22 @@ class BombermanGame(State):
                 PRIMARY_COLOR,
                 center=True,
             )
+            self.screen.blit(self.overlay, (0, 0))
+        elif self.state == "victory":
+            self.overlay.fill((0, 0, 0, 200))
+            text = "DRAW" if self.winner == 0 else f"PLAYER {self.winner} WINS"
+            draw_text(
+                self.overlay,
+                text,
+                (
+                    self.screen.get_width() // 2,
+                    self.screen.get_height() // 2 - 60,
+                ),
+                48,
+                PRIMARY_COLOR,
+                center=True,
+            )
+            self.victory_menu.draw(self.overlay)
             self.screen.blit(self.overlay, (0, 0))
 
 
