@@ -2,6 +2,7 @@ import os
 import pygame
 from state import State
 from utils.persistence import load_json, save_json
+from common.theme import ACCENT_COLOR, BG_COLOR, PRIMARY_COLOR, draw_text
 
 SETTINGS_PATH = os.path.join(os.path.dirname(__file__), "settings.json")
 DEFAULT_SETTINGS = {
@@ -16,7 +17,6 @@ RESOLUTIONS = [(640, 480), (800, 600)]
 class SettingsState(State):
     def startup(self, screen, num_players: int = 1):
         super().startup(screen, num_players)
-        self.font = pygame.font.SysFont("Courier", 32)
         self.index = 0
         self.settings = load_json(SETTINGS_PATH, DEFAULT_SETTINGS)
         size = tuple(self.settings.get("window_size", RESOLUTIONS[1]))
@@ -90,10 +90,10 @@ class SettingsState(State):
             pygame.mixer.music.set_volume(self.settings["sound_volume"])
 
     def draw(self):
-        self.screen.fill((0, 0, 0))
+        self.screen.fill(BG_COLOR)
         width, height = self.screen.get_size()
         for i, option in enumerate(self.options):
-            color = (0, 255, 0) if i == self.index else (0, 155, 0)
+            color = PRIMARY_COLOR if i == self.index else ACCENT_COLOR
             prefix = "> " if i == self.index else "  "
             if option == "Fullscreen":
                 value = "On" if self.settings.get("fullscreen", False) else "Off"
@@ -104,6 +104,11 @@ class SettingsState(State):
                 value = f"{self.settings.get('sound_volume', 1.0):.1f}"
             else:
                 value = ""
-            text = self.font.render(f"{prefix}{option} {value}", True, color)
-            rect = text.get_rect(center=(width // 2, height // 3 + i * 40))
-            self.screen.blit(text, rect)
+            draw_text(
+                self.screen,
+                f"{prefix}{option} {value}",
+                (width // 2, height // 3 + i * 40),
+                32,
+                color,
+                center=True,
+            )
