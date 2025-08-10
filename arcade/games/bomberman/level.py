@@ -44,6 +44,54 @@ class Level:
                     if random.random() < 0.7:
                         self.grid[y][x] = BRICK
 
+    @classmethod
+    def generate_random(
+        cls, width: int, height: int, seed: int | None = None
+    ) -> "Level":
+        """Create a new level with deterministic randomness.
+
+        Parameters
+        ----------
+        width, height:
+            Size of the level in tiles.
+        seed:
+            Optional seed to make generation deterministic. If ``None`` a
+            random seed is used.
+
+        The resulting map always leaves player spawn tiles empty and carves a
+        simple corridor ensuring there is at least one valid path for enemies
+        to roam without needing to destroy bricks.
+        """
+
+        rng = random.Random(seed)
+        level = cls((width, height))
+        grid: List[List[int]] = [[EMPTY for _ in range(width)] for _ in range(height)]
+        for y in range(height):
+            for x in range(width):
+                if x == 0 or y == 0 or x == width - 1 or y == height - 1:
+                    grid[y][x] = WALL
+                elif x % 2 == 0 and y % 2 == 0:
+                    grid[y][x] = WALL
+                else:
+                    if (x, y) in {
+                        (1, 1),
+                        (1, 2),
+                        (2, 1),
+                        (width - 2, height - 2),
+                        (width - 3, height - 2),
+                        (width - 2, height - 3),
+                    }:
+                        continue
+                    if rng.random() < 0.7:
+                        grid[y][x] = BRICK
+        # carve a guaranteed path from top-left to bottom-right
+        for x in range(1, width - 1):
+            grid[1][x] = EMPTY
+        for y in range(1, height - 1):
+            grid[y][width - 2] = EMPTY
+        level.grid = grid
+        return level
+
     def is_blocked(self, x: int, y: int) -> bool:
         if x < 0 or y < 0 or x >= self.width or y >= self.height:
             return True
