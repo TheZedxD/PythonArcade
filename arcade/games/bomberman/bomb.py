@@ -1,9 +1,10 @@
 """Bomb logic for Bomberman."""
+
 from __future__ import annotations
 
 import pygame
 
-from .level import TILE_SIZE, Level, BRICK, EMPTY
+from .level import TILE_SIZE, Level, BRICK
 from .explosion import Explosion
 
 
@@ -34,5 +35,7 @@ class Bomb:
                 tiles.append((nx, ny))
         return [Explosion(x, y) for x, y in tiles]
 
-    def draw(self, surface: pygame.surface.Surface, image: pygame.surface.Surface) -> None:
+    def draw(
+        self, surface: pygame.surface.Surface, image: pygame.surface.Surface
+    ) -> None:
         surface.blit(image, (self.x * TILE_SIZE, self.y * TILE_SIZE))

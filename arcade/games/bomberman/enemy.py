@@ -1,4 +1,5 @@
 """Simple enemy AI for Bomberman."""
+
 from __future__ import annotations
 
 import random

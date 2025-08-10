@@ -1,4 +1,5 @@
 """Level generation and grid utilities for Bomberman."""
+
 from __future__ import annotations
 
 import random
@@ -31,10 +32,14 @@ class Level:
                     self.grid[y][x] = WALL
                 else:
                     # leave spawn areas empty
-                    if (x, y) in {(1, 1), (1, 2), (2, 1),
-                                  (self.width - 2, self.height - 2),
-                                  (self.width - 3, self.height - 2),
-                                  (self.width - 2, self.height - 3)}:
+                    if (x, y) in {
+                        (1, 1),
+                        (1, 2),
+                        (2, 1),
+                        (self.width - 2, self.height - 2),
+                        (self.width - 3, self.height - 2),
+                        (self.width - 2, self.height - 3),
+                    }:
                         continue
                     if random.random() < 0.7:
                         self.grid[y][x] = BRICK
@@ -48,7 +53,9 @@ class Level:
         if self.grid[y][x] == BRICK:
             self.grid[y][x] = EMPTY
 
-    def draw(self, surface: pygame.surface.Surface, assets: dict[str, pygame.surface.Surface]) -> None:
+    def draw(
+        self, surface: pygame.surface.Surface, assets: dict[str, pygame.surface.Surface]
+    ) -> None:
         for y in range(self.height):
             for x in range(self.width):
                 tile = self.grid[y][x]
@@ -58,6 +65,10 @@ class Level:
                 elif tile == BRICK:
                     surface.blit(assets["brick"], pos)
                 else:
-                    pygame.draw.rect(surface, (0, 0, 0), (pos[0], pos[1], TILE_SIZE, TILE_SIZE))
+                    pygame.draw.rect(
+                        surface, (0, 0, 0), (pos[0], pos[1], TILE_SIZE, TILE_SIZE)
+                    )
                 # grid lines
-                pygame.draw.rect(surface, (0, 40, 0), (pos[0], pos[1], TILE_SIZE, TILE_SIZE), 1)
+                pygame.draw.rect(
+                    surface, (0, 40, 0), (pos[0], pos[1], TILE_SIZE, TILE_SIZE), 1
+                )

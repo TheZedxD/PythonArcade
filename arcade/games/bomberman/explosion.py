@@ -1,4 +1,5 @@
 """Explosion rendering for Bomberman."""
+
 from __future__ import annotations
 
 import pygame
@@ -16,5 +17,7 @@ class Explosion:
         self.timer -= dt
         return self.timer <= 0
 
-    def draw(self, surface: pygame.surface.Surface, image: pygame.surface.Surface) -> None:
+    def draw(
+        self, surface: pygame.surface.Surface, image: pygame.surface.Surface
+    ) -> None:
         surface.blit(image, (self.x * TILE_SIZE, self.y * TILE_SIZE))

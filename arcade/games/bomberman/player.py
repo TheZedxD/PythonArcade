@@ -1,4 +1,5 @@
 """Player logic for Bomberman."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -18,7 +19,9 @@ class Controls:
 
 
 class Player:
-    def __init__(self, x: int, y: int, controls: Controls, image: pygame.surface.Surface):
+    def __init__(
+        self, x: int, y: int, controls: Controls, image: pygame.surface.Surface
+    ):
         self.x = x
         self.y = y
         self.controls = controls

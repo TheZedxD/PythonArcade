@@ -1,4 +1,5 @@
 """Matrix-themed Bomberman clone scaffolding."""
+
 from __future__ import annotations
 
 import os
@@ -52,9 +53,7 @@ class BombermanGame(State):
             right=pygame.K_RIGHT,
             bomb=pygame.K_SPACE,
         )
-        self.players.append(
-            Player(1, 1, p1_controls, self.assets["player1"])
-        )
+        self.players.append(Player(1, 1, p1_controls, self.assets["player1"]))
         if self.num_players == 2:
             p2_controls = Controls(
                 up=pygame.K_w,
@@ -100,7 +99,12 @@ class BombermanGame(State):
         }
 
         # add simple details
-        pygame.draw.circle(assets["bomb"], (150, 150, 150), (TILE_SIZE // 2, TILE_SIZE // 2), TILE_SIZE // 2)
+        pygame.draw.circle(
+            assets["bomb"],
+            (150, 150, 150),
+            (TILE_SIZE // 2, TILE_SIZE // 2),
+            TILE_SIZE // 2,
+        )
         pygame.draw.rect(assets["player1"], (0, 0, 0), assets["player1"].get_rect(), 2)
         pygame.draw.rect(assets["player2"], (0, 0, 0), assets["player2"].get_rect(), 2)
         pygame.draw.rect(assets["enemy"], (0, 0, 0), assets["enemy"].get_rect(), 2)
@@ -139,10 +143,14 @@ class BombermanGame(State):
                 self.done = True
                 self.next = "menu"
 
-    def handle_gamepad(self, event: pygame.event.Event) -> None:  # pragma: no cover - placeholder
+    def handle_gamepad(
+        self, event: pygame.event.Event
+    ) -> None:  # pragma: no cover - placeholder
         pass
 
-    def handle_mouse(self, event: pygame.event.Event) -> None:  # pragma: no cover - unused
+    def handle_mouse(
+        self, event: pygame.event.Event
+    ) -> None:  # pragma: no cover - unused
         pass
 
     # ------------------------------------------------------------------ update

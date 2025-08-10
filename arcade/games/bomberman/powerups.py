@@ -1,4 +1,5 @@
 """Power-up logic for Bomberman."""
+
 from __future__ import annotations
 
 import pygame
