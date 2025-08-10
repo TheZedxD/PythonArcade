@@ -1,0 +1,7 @@
+{
+  "map_size": [15, 13],
+  "enemy_count": 3,
+  "fuse_ms": 2000,
+  "base_blast_radius": 2,
+  "max_bombs_per_player": 1
+}
