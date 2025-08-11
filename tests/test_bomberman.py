@@ -8,17 +8,33 @@ they can execute in CI environments without a display.
 from __future__ import annotations
 
 import os
-import pathlib
 import sys
+from pathlib import Path
 
 import pygame
+import pytest
 
-# Ensure the project root is importable
-sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.extend([str(ROOT), str(ROOT / "arcade")])
 
-from arcade.games.bomberman.level import Level, EMPTY, WALL, BRICK
-from arcade.games.bomberman.bomb import Bomb
-from arcade.games.bomberman.enemy import Enemy
+from arcade.games.bomberman.level import (  # noqa: E402
+    Level,
+    EMPTY,
+    WALL,
+    BRICK,
+    TILE_SIZE,
+)
+from arcade.games.bomberman.bomb import Bomb  # noqa: E402
+from arcade.games.bomberman.enemy import Enemy  # noqa: E402
+
+
+@pytest.fixture()
+def pygame_headless() -> None:
+    os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
+    os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
+    pygame.init()
+    yield
+    pygame.quit()
 
 
 def make_empty_level(w: int = 7, h: int = 5) -> Level:
@@ -31,17 +47,7 @@ def make_empty_level(w: int = 7, h: int = 5) -> Level:
     return lvl
 
 
-def setup_pygame() -> None:
-    os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-    pygame.init()
-
-
-def teardown_pygame() -> None:
-    pygame.quit()
-
-
-def test_chain_reaction_destroys_soft_block():
-    setup_pygame()
+def test_chain_reaction_destroys_soft_block(pygame_headless) -> None:
     lvl = make_empty_level()
     # place a brick two tiles to the right of the first bomb
     lvl.grid[2][4] = BRICK
@@ -53,11 +59,9 @@ def test_chain_reaction_destroys_soft_block():
     b1.explode(lvl, bombs)
     assert lvl.grid[2][4] == EMPTY
     assert b2 not in bombs
-    teardown_pygame()
 
 
-def test_hard_block_stops_ray():
-    setup_pygame()
+def test_hard_block_stops_ray(pygame_headless) -> None:
     lvl = make_empty_level()
     lvl.grid[1][2] = WALL
     lvl.grid[1][3] = BRICK
@@ -65,23 +69,20 @@ def test_hard_block_stops_ray():
     bomb.explode(lvl)
     # brick beyond the wall should remain
     assert lvl.grid[1][3] == BRICK
-    teardown_pygame()
 
 
-def test_enemy_damage_only_in_ray():
-    setup_pygame()
+def test_enemy_damage_only_in_ray(pygame_headless) -> None:
     lvl = make_empty_level()
     bomb = Bomb(1, 1, 1000, 2)
     explosions, _ = bomb.explode(lvl)
-    e_hit = Enemy(2, 1, pygame.Surface((1, 1)), speed=0.1)
-    e_safe = Enemy(2, 2, pygame.Surface((1, 1)), speed=0.1)
+    surface = pygame.Surface((TILE_SIZE, TILE_SIZE))
+    e_hit = Enemy(2, 1, surface, speed=0.1)
+    e_safe = Enemy(2, 2, surface, speed=0.1)
     assert not e_hit.update(0.1, lvl, [], explosions)
     assert e_safe.update(0.1, lvl, [], explosions)
-    teardown_pygame()
 
 
-def test_headless_tick_loop():
-    setup_pygame()
+def test_headless_tick_loop(pygame_headless) -> None:
     from arcade.games.bomberman.bomberman import BombermanGame
 
     screen = pygame.Surface((320, 240))
@@ -90,5 +91,4 @@ def test_headless_tick_loop():
     for _ in range(3):
         game.update(0.1)
     # no assertion; test passes if no exceptions are raised
-    teardown_pygame()
 
