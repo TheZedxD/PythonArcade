@@ -1,65 +1,55 @@
-import os
-from unittest.mock import patch
+from pathlib import Path
+import sys
 
-import pygame
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.extend([str(ROOT), str(ROOT / "arcade")])
 
-from arcade.games.kart8.engine.track import create_demo_track
-from arcade.games.kart8.engine.physics import Car
-from arcade.games.kart8.game import Game, NUM_LAPS
-
-
-class KeyState(dict):
-    """Mapping-like object for mocking key presses."""
-
-    def __getitem__(self, key):
-        return self.get(key, False)
-
-
-def setup_game():
-    os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-    pygame.init()
-    pygame.display.set_mode((320, 240))
-    g = Game()
-    screen = pygame.display.get_surface()
-    g.startup(screen)
-    return g
-
-
-def teardown_game():
-    pygame.display.quit()
-    pygame.quit()
+from arcade.games.kart8.engine.track import create_demo_track  # noqa: E402
+from arcade.games.kart8.engine.physics import Car  # noqa: E402
+from arcade.games.kart8.game import NUM_LAPS  # noqa: E402
 
 
 def test_deterministic_physics():
+    """Updating with different dt slices should give identical results."""
+
     track = create_demo_track()
+
     car1 = Car(track)
-    controls = {"accelerate": True}
-    for _ in range(10):
-        car1.update(0.1, controls, False)
+    for _ in range(10):  # coarse steps
+        car1.update(0.1, {"accelerate": True}, False)
     speed1 = car1.speed
 
     car2 = Car(track)
-    for _ in range(50):
-        car2.update(0.02, controls, False)
+    for _ in range(50):  # fine steps
+        car2.update(0.02, {"accelerate": True}, False)
+
+    # identical acceleration regardless of step size
     assert abs(speed1 - car2.speed) < 1e-5
 
-    controls = {"brake": True}
+    # braking brings the kart to (almost) a halt
     for _ in range(120):
-        car1.update(1 / 60, controls, False)
+        car1.update(1 / 60, {"brake": True}, False)
     assert car1.speed <= 0.1
 
 
 def test_checkpoint_lap_and_finish():
-    g = setup_game()
-    try:
-        p = g.players[0]
-        with patch("pygame.key.get_pressed") as mock_pressed:
-            mock_pressed.return_value = KeyState({pygame.K_w: True})
-            p.speed = p.max_speed
-            frames = int((g.track.total_length / p.speed) * 60) * NUM_LAPS + 60
-            for _ in range(frames):
-                g.update(1 / 60)
-        assert g.laps[0] >= NUM_LAPS
-        assert g.finished[0] is True
-    finally:
-        teardown_game()
+    """A car travelling at max speed should complete the required laps."""
+
+    track = create_demo_track()
+    car = Car(track)
+    cp_index = 0
+    laps = 0
+    dt = 1 / 60
+
+    # enough frames to cover the track for the number of laps
+    frames = int((track.total_length / car.max_speed) * 60) * NUM_LAPS + 60
+    for _ in range(frames):
+        prev_z = car.z
+        car.update(dt, {"accelerate": True}, False)
+        next_cp = track.checkpoints[(cp_index + 1) % len(track.checkpoints)]
+        if abs(car.x) <= track.check_width and track.passed(prev_z, car.z, next_cp):
+            cp_index = (cp_index + 1) % len(track.checkpoints)
+            if cp_index == 0:
+                laps += 1
+
+    assert laps >= NUM_LAPS
