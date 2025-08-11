@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import List, Optional, Tuple
+
 import pygame
 
 from .level import TILE_SIZE, Level, BRICK
@@ -15,7 +17,7 @@ class Bomb:
         self.timer = fuse_ms / 1000.0
         self.radius = radius
         self.owner = owner
-        self.image: pygame.surface.Surface | None = None
+        self.image: Optional[pygame.surface.Surface] = None
 
     def update(self, dt: float) -> bool:
         self.timer -= dt
@@ -24,8 +26,8 @@ class Bomb:
     def explode(
         self,
         level: Level,
-        bombs: list["Bomb"] | None = None,
-    ) -> tuple[list[Explosion], list[tuple[int, int]]]:
+        bombs: Optional[List["Bomb"]] = None,
+    ) -> Tuple[List[Explosion], List[Tuple[int, int]]]:
         """Create explosion tiles and return destroyed bricks.
 
         Parameters
@@ -41,7 +43,7 @@ class Bomb:
         """
 
         tiles = [(self.x, self.y)]
-        destroyed: list[tuple[int, int]] = []
+        destroyed: List[Tuple[int, int]] = []
         dirs = [(-1, 0), (1, 0), (0, -1), (0, 1)]
         for dx, dy in dirs:
             for i in range(1, self.radius + 1):

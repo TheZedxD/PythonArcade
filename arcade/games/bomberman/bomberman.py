@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 import random
+from typing import Optional
+
 import pygame
 
 from state import State
@@ -103,10 +105,10 @@ class BombermanGame(State):
         self.prev_volume = self.settings.get("sound_volume", 1.0)
         self.state = "settings"
         self.winner = 0
-        self.level: Level | None = None
+        self.level: Optional[Level] = None
         self.players: list[Player] = []
-        self.p1: Player | None = None
-        self.p2: Player | None = None
+        self.p1: Optional[Player] = None
+        self.p2: Optional[Player] = None
         self.enemies: list[Enemy] = []
         self.bombs: list[Bomb] = []
         self.explosions: list[Explosion] = []
