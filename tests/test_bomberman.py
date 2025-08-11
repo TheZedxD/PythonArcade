@@ -91,4 +91,3 @@ def test_headless_tick_loop(pygame_headless) -> None:
     for _ in range(3):
         game.update(0.1)
     # no assertion; test passes if no exceptions are raised
-
