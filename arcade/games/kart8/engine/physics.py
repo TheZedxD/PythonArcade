@@ -16,11 +16,12 @@ velocity and harder to turn at top speed.
 """
 
 from dataclasses import dataclass
+from typing import Any
 
 
 @dataclass
 class Car:
-    track: any
+    track: Any
     z: float = 0.0
     x: float = 0.0  # lateral position
     speed: float = 0.0  # forward speed
@@ -39,9 +40,11 @@ class Car:
     # Drift handling
     drift_boost: float = 40.0
     drift_cooldown: float = 0.0
+    _drift_timer: float = 0.0
 
-    # Fixed step accumulator.  16 ms closely matches a 60 FPS update rate
-    # while still allowing small dt fluctuations from the main loop.
+    # Fixed step accumulator.  A 16 ms step closely matches a 60 FPS
+    # update rate while still allowing small dt fluctuations from the main
+    # loop without drifting over time.
     _accum: float = 0.0
     step_dt: float = 0.016
 
@@ -102,9 +105,9 @@ class Car:
         if drifting:
             # accumulate drift time in vx (no storage needed)
             self.vx *= 1.02
-            self._drift_timer = getattr(self, "_drift_timer", 0.0) + dt
+            self._drift_timer += dt
         else:
-            if getattr(self, "_drift_timer", 0.0) > 0 and self.drift_cooldown <= 0:
+            if self._drift_timer > 0 and self.drift_cooldown <= 0:
                 self.speed = min(
                     self.max_speed * 1.2, self.speed + self.drift_boost
                 )
