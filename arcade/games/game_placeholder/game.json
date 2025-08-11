@@ -1,0 +1,5 @@
+{
+  "title": "Placeholder",
+  "entrypoint": "arcade.games.game_placeholder.game:PlaceholderGameState",
+  "description": "Demo placeholder game"
+}

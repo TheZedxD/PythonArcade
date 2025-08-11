@@ -11,6 +11,7 @@ from common.theme import (
     PRIMARY_COLOR,
     get_font,
 )
+from ui.layout import scale
 
 
 class MainMenuState(State):
@@ -33,6 +34,7 @@ class MainMenuState(State):
         self.selected_game = None
         self.option_surfaces = []
         self.option_positions = []
+        self.search_text = ""
         self.prompt_players = None
         self.prompt_items = None
         self.prompt_rect = None
@@ -46,9 +48,9 @@ class MainMenuState(State):
         super().startup(screen, num_players)
         self.num_players = 1
         self.game_options = {}
-        self.font = get_font(32)
-        self.title_font = get_font(48, bold=True)
-        self.rain_font = get_font(20)
+        self.font = get_font(scale(32))
+        self.title_font = get_font(scale(48), bold=True)
+        self.rain_font = get_font(scale(20))
         base_dir = os.path.join(os.path.dirname(__file__), "games")
         entries = []
         for name in os.listdir(base_dir):
@@ -139,6 +141,14 @@ class MainMenuState(State):
                     self.index = (self.index + 1) % len(self.options)
                 elif event.key in (pygame.K_UP, pygame.K_w):
                     self.index = (self.index - 1) % len(self.options)
+                elif event.key == pygame.K_BACKSPACE:
+                    self.search_text = self.search_text[:-1]
+                elif event.unicode and event.unicode.isprintable():
+                    self.search_text += event.unicode
+                    for i, (_, label) in enumerate(self.options):
+                        if label.lower().startswith(self.search_text.lower()):
+                            self.index = i
+                            break
                 elif event.key == pygame.K_RETURN:
                     choice = self.options[self.index][0]
                     if choice == "Quit":

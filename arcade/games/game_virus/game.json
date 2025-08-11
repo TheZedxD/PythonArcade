@@ -1,0 +1,5 @@
+{
+  "title": "Virus",
+  "entrypoint": "arcade.games.game_virus.game:VirusState",
+  "description": "Survive the virus attack"
+}

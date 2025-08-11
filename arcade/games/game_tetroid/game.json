@@ -1,0 +1,5 @@
+{
+  "title": "Tetroid",
+  "entrypoint": "arcade.games.game_tetroid.game:TetroidState",
+  "description": "Falling blocks puzzle"
+}
