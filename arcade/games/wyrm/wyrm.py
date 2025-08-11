@@ -1,12 +1,12 @@
-import os
 from typing import List, Set, Tuple
 
 import pygame
 
 from state import State
 from utils.persistence import load_json, save_json
+from utils.resources import asset_path, save_path
 
-SETTINGS_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "settings.json")
+SETTINGS_PATH = save_path("settings.json")
 
 GRID_SIZE = 20
 NUM_SEGMENTS = 12
@@ -69,15 +69,16 @@ class WyrmGame(State):
         self.move_delay = MOVE_DELAY
         self.font = pygame.font.SysFont("Courier", 20)
         self.big_font = pygame.font.SysFont("Courier", 32)
-        base = os.path.join(os.path.dirname(__file__), "assets")
         try:
             self.segment_img = pygame.image.load(
-                os.path.join(base, "segment.png")
+                asset_path("games", "wyrm", "assets", "segment.png")
             ).convert_alpha()
         except Exception:
             self.segment_img = None
         try:
-            self.shot_sound = pygame.mixer.Sound(os.path.join(base, "shot.wav"))
+            self.shot_sound = pygame.mixer.Sound(
+                asset_path("games", "wyrm", "assets", "shot.wav")
+            )
         except Exception:
             self.shot_sound = None
         self.settings = load_json(

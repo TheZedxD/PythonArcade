@@ -1,5 +1,6 @@
 import pygame
 
+from ui.layout import scale
 from .theme import ACCENT_COLOR, PRIMARY_COLOR, draw_text
 
 
@@ -8,7 +9,7 @@ class PauseMenu:
 
     def __init__(self, options: list[str], font_size: int = 32):
         self.options = options
-        self.font_size = font_size
+        self.font_size = scale(font_size)
         self.index = 0
         self.normal_color = ACCENT_COLOR
         self.highlight_color = PRIMARY_COLOR

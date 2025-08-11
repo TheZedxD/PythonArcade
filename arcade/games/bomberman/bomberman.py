@@ -8,6 +8,7 @@ import pygame
 
 from state import State
 from utils.persistence import load_json
+from utils.resources import save_path
 from common.theme import ACCENT_COLOR, PRIMARY_COLOR, draw_text, terminal_panel
 from common.ui import PauseMenu
 
@@ -20,7 +21,7 @@ from .powerups import PowerUp
 
 BASE_PATH = Path(__file__).resolve().parent
 CONFIG_PATH = BASE_PATH / "config.json"
-SETTINGS_PATH = BASE_PATH.parents[2] / "settings.json"
+SETTINGS_PATH = save_path("settings.json")
 DEFAULT_CONFIG = {
     "map_size": [15, 13],
     "enemy_count": 3,

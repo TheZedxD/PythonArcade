@@ -1,4 +1,3 @@
-import os
 import random
 import string
 from datetime import datetime
@@ -6,14 +5,15 @@ import pygame
 
 from state import State
 from utils.persistence import load_json, save_json
+from utils.resources import save_path
 
 # Grid size
 GRID_WIDTH = 10
 GRID_HEIGHT = 20
 
 # Path for high scores and settings
-HS_PATH = os.path.join(os.path.dirname(__file__), "highscores.json")
-SETTINGS_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "settings.json")
+HS_PATH = save_path("tetroid_highscores.json")
+SETTINGS_PATH = save_path("settings.json")
 
 # Tetromino definitions: list of rotations, each rotation is list of (x, y)
 TETROMINOES = {

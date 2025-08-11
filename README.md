@@ -22,7 +22,7 @@ A collection of simple Pygame-based games packaged under an arcade shell.
    bash scripts/run_linux.sh
 
    # Windows
-       scripts\run_windows.bat
+   scripts\run_windows.bat
    ```
 
 ## Updating

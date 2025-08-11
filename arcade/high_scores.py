@@ -1,8 +1,8 @@
-import os
 import sqlite3
 from typing import List, Tuple
+from utils.resources import save_path
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "high_scores.db")
+DB_PATH = save_path("high_scores.db")
 
 
 def _get_conn() -> sqlite3.Connection:
