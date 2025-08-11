@@ -1,4 +1,3 @@
-import os
 import random
 import string
 from datetime import datetime
@@ -6,14 +5,15 @@ import pygame
 
 from state import State
 from utils.persistence import load_json, save_json
+from utils.resources import save_path
 
 # Grid dimensions for Virus bottle
 GRID_WIDTH = 8
 GRID_HEIGHT = 16
 
 # Paths for high scores and settings
-HS_PATH = os.path.join(os.path.dirname(__file__), "highscores.json")
-SETTINGS_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "settings.json")
+HS_PATH = save_path("virus_highscores.json")
+SETTINGS_PATH = save_path("settings.json")
 
 # Color palette for pills and viruses (RGB values)
 COLORS = [(255, 0, 0), (0, 0, 255), (255, 255, 0)]  # Red  # Blue  # Yellow

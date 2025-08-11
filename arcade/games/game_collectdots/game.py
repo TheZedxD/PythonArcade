@@ -1,13 +1,14 @@
-import os
 import random
 from datetime import datetime
 import pygame
 from state import State
 from utils.persistence import load_json, save_json
+from utils.resources import save_path
 from common.theme import BG_COLOR, PRIMARY_COLOR, draw_text, get_font
 from common.ui import PauseMenu
 
-SETTINGS_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "settings.json")
+SETTINGS_PATH = save_path("settings.json")
+HS_PATH = save_path("collectdots_highscores.json")
 
 
 class CollectDotsState(State):
@@ -31,7 +32,7 @@ class CollectDotsState(State):
             ["Resume", "Volume -", "Volume +", "Fullscreen", "Quit"],
             font_size=32,
         )
-        self.hs_path = os.path.join(os.path.dirname(__file__), "highscores.json")
+        self.hs_path = HS_PATH
         self.data = load_json(
             self.hs_path, {"highscore": 0, "plays": 0, "last_played": None}
         )

@@ -1,5 +1,7 @@
 import pygame
 
+from ui.layout import scale
+
 # Matrix-style color palette
 BG_COLOR = (0, 0, 0)
 PRIMARY_COLOR = (0, 255, 0)
@@ -7,12 +9,12 @@ ACCENT_COLOR = (0, 155, 0)
 
 
 def get_font(size: int, bold: bool = False) -> pygame.font.Font:
-    """Return a Courier font at the given *size*.
+    """Return a Courier font at the scaled *size*.
 
     All arcade games use the same monospace font to maintain the
     terminal-style aesthetic.
     """
-    return pygame.font.SysFont("Courier", size, bold=bold)
+    return pygame.font.SysFont("Courier", scale(size), bold=bold)
 
 
 def draw_text(

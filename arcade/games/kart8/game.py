@@ -1,17 +1,16 @@
 import math
-from pathlib import Path
 
 import pygame
 
 from state import State
 from utils.persistence import load_json, save_json
+from utils.resources import save_path
 
 from .engine.track import create_demo_track
 from .engine.renderer import Renderer
 from .engine.physics import Car, Ghost
 
-BASE_PATH = Path(__file__).resolve().parents[2]
-SAVE_PATH = BASE_PATH / "save" / "kart8.json"
+SAVE_PATH = save_path("kart8.json")
 DEFAULT_DATA = {
     "settings": {
         "difficulty": 1.0,
@@ -36,7 +35,7 @@ class KartGame(State):
         if not items:
             self.track.items = []
         self.items_enabled = items
-        self.data = load_json(str(SAVE_PATH), DEFAULT_DATA)
+        self.data = load_json(SAVE_PATH, DEFAULT_DATA)
         settings = self.data.get("settings", {})
         self.difficulty = settings.get("difficulty", 1.0)
         self.layout = settings.get("layout", "vertical")

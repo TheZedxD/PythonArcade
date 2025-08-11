@@ -1,10 +1,10 @@
-import os
 import pygame
 from state import State
 from utils.persistence import load_json, save_json
+from utils.resources import save_path
 from common.theme import ACCENT_COLOR, BG_COLOR, PRIMARY_COLOR, draw_text
 
-SETTINGS_PATH = os.path.join(os.path.dirname(__file__), "settings.json")
+SETTINGS_PATH = save_path("settings.json")
 DEFAULT_SETTINGS = {
     "window_size": [800, 600],
     "fullscreen": False,

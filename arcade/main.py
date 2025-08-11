@@ -5,9 +5,11 @@ import pygame
 from arcade_menu import MainMenuState
 from settings_state import SettingsState
 from state import State
+from ui.layout import init as layout_init
 from utils.persistence import load_json, save_json
+from utils.resources import save_path
 
-SETTINGS_PATH = os.path.join(os.path.dirname(__file__), "settings.json")
+SETTINGS_PATH = save_path("settings.json")
 DEFAULT_SETTINGS = {
     "window_size": [800, 600],
     "fullscreen": False,
@@ -59,6 +61,7 @@ def main():
         | (pygame.FULLSCREEN if settings.get("fullscreen") else 0)
     )
     screen = pygame.display.set_mode(base_size, flags, vsync=1)
+    layout_init(screen.get_size())
     pygame.display.set_caption("Arcade")
     pygame.mixer.music.set_volume(settings.get("sound_volume", 1.0))
     clock = pygame.time.Clock()
@@ -86,6 +89,7 @@ def main():
                     | (pygame.FULLSCREEN if settings.get("fullscreen") else 0)
                 )
                 screen = pygame.display.set_mode(base_size, flags, vsync=1)
+                layout_init(screen.get_size())
                 for state in states.values():
                     state.screen = screen
                 save_json(SETTINGS_PATH, settings)
@@ -121,6 +125,7 @@ def main():
                     | (pygame.FULLSCREEN if settings.get("fullscreen") else 0)
                 )
                 screen = pygame.display.set_mode(base_size, flags, vsync=1)
+                layout_init(screen.get_size())
                 for state in states.values():
                     state.screen = screen
             if next_state:
