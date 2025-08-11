@@ -4,7 +4,7 @@ import importlib
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, List
+from typing import List
 
 from .igame import IGame, StateAdapter
 
