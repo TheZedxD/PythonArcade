@@ -408,11 +408,15 @@ class BombermanGame(State):
             if not enemy.update(dt, self.level, self.bombs, self.explosions):
                 self.enemies.remove(enemy)
         for bomb in list(self.bombs):
+            if bomb not in self.bombs:
+                # bomb may have been removed via chain reaction
+                continue
             if bomb.update(dt):
-                explosions, destroyed = bomb.explode(self.level)
+                explosions, destroyed = bomb.explode(self.level, self.bombs)
                 self.explosions.extend(explosions)
                 self._spawn_powerups(destroyed)
-                self.bombs.remove(bomb)
+                if bomb in self.bombs:
+                    self.bombs.remove(bomb)
         for expl in list(self.explosions):
             if expl.update(dt):
                 self.explosions.remove(expl)

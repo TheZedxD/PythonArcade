@@ -21,8 +21,24 @@ class Bomb:
         self.timer -= dt
         return self.timer <= 0
 
-    def explode(self, level: Level) -> tuple[list[Explosion], list[tuple[int, int]]]:
-        """Create explosion tiles and return destroyed bricks."""
+    def explode(
+        self,
+        level: Level,
+        bombs: list["Bomb"] | None = None,
+    ) -> tuple[list[Explosion], list[tuple[int, int]]]:
+        """Create explosion tiles and return destroyed bricks.
+
+        Parameters
+        ----------
+        level:
+            The level on which the bomb resides. Used for collision checks and
+            destroying bricks.
+        bombs:
+            Optional list of active bombs. If provided, any bombs caught in the
+            blast will immediately detonate, enabling chain reactions. Triggered
+            bombs are removed from ``bombs`` and their resulting explosion tiles
+            and destroyed bricks are merged into the return values.
+        """
 
         tiles = [(self.x, self.y)]
         destroyed: list[tuple[int, int]] = []
@@ -37,7 +53,20 @@ class Bomb:
                         destroyed.append((nx, ny))
                     break
                 tiles.append((nx, ny))
-        return [Explosion(x, y) for x, y in tiles], destroyed
+
+        explosions = [Explosion(x, y) for x, y in tiles]
+
+        if bombs:
+            triggered = [
+                b for b in list(bombs) if (b.x, b.y) in tiles and b is not self
+            ]
+            for other in triggered:
+                bombs.remove(other)
+                exps, dest = other.explode(level, bombs)
+                explosions.extend(exps)
+                destroyed.extend(dest)
+
+        return explosions, destroyed
 
     def draw(
         self, surface: pygame.surface.Surface, image: pygame.surface.Surface
