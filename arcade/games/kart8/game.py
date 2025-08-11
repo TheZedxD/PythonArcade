@@ -54,9 +54,6 @@ class KartGame(State):
         self.laps = [0 for _ in self.players]
         self.lap_times = [[] for _ in self.players]
         self.timers = [0.0 for _ in self.players]
-        self.cp_index = [0 for _ in self.players]
-        self.off_track = [0.0 for _ in self.players]
-        self.finished = [False for _ in self.players]
         self.font = pygame.font.SysFont("Courier", 20)
         self.hud_color = (0, 255, 0)
         self.create_help_surface()
@@ -120,8 +117,8 @@ class KartGame(State):
     def create_help_surface(self):
         lines = [
             "Controls:",
-            "P1 WASD + Shift drift",
-            "P2 Arrows + RCtrl drift",
+            "P1 WASD + Shift boost",
+            "P2 Arrows + RCtrl boost",
             "Tab toggle split",
             "Esc to menu",
         ]
@@ -186,11 +183,16 @@ class KartGame(State):
             "left": keys[pygame.K_a],
             "right": keys[pygame.K_d],
         }
-        drift1 = keys[pygame.K_LSHIFT]
+        boost1 = keys[pygame.K_LSHIFT]
         prev_z1 = self.players[0].z
-        self.players[0].update(dt, controls1, drift1)
+        self.players[0].update(dt, controls1, boost1)
         self.timers[0] += dt
-        self._post_update_player(0, prev_z1, dt)
+        if prev_z1 > self.players[0].z:
+            self.laps[0] += 1
+            self.lap_times[0].append(self.timers[0])
+            self.timers[0] = 0.0
+            if len(self.lap_times[0]) >= NUM_LAPS:
+                self.record_time(0)
 
         if self.num_players > 1:
             controls2 = {
@@ -199,11 +201,16 @@ class KartGame(State):
                 "left": keys[pygame.K_LEFT],
                 "right": keys[pygame.K_RIGHT],
             }
-            drift2 = keys[pygame.K_RCTRL]
+            boost2 = keys[pygame.K_RCTRL]
             prev_z2 = self.players[1].z
-            self.players[1].update(dt, controls2, drift2)
+            self.players[1].update(dt, controls2, boost2)
             self.timers[1] += dt
-            self._post_update_player(1, prev_z2, dt)
+            if prev_z2 > self.players[1].z:
+                self.laps[1] += 1
+                self.lap_times[1].append(self.timers[1])
+                self.timers[1] = 0.0
+                if len(self.lap_times[1]) >= NUM_LAPS:
+                    self.record_time(1)
         elif self.ghost:
             self.ghost.update(dt, self.players[0].z)
 
@@ -229,43 +236,6 @@ class KartGame(State):
                             p.speed *= 0.5
                             item["active"] = False
         self.track.items = [i for i in self.track.items if i.get("active", True)]
-
-    def _post_update_player(self, idx: int, prev_z: float, dt: float):
-        """Handle checkpoint logic and off-track respawn for player ``idx``."""
-
-        player = self.players[idx]
-        # checkpoint progression
-        next_cp = self.track.checkpoints[
-            (self.cp_index[idx] + 1) % len(self.track.checkpoints)
-        ]
-        if (
-            abs(player.x) <= self.track.check_width
-            and self.track.passed(prev_z, player.z, next_cp)
-        ):
-            self.cp_index[idx] = (self.cp_index[idx] + 1) % len(
-                self.track.checkpoints
-            )
-            if self.cp_index[idx] == 0:
-                self.laps[idx] += 1
-                self.lap_times[idx].append(self.timers[idx])
-                self.timers[idx] = 0.0
-                if len(self.lap_times[idx]) >= NUM_LAPS:
-                    self.record_time(idx)
-                    self.finished[idx] = True
-
-        # off-track slowdown and respawn
-        if abs(player.x) > self.track.check_width:
-            self.off_track[idx] += dt
-            player.speed *= 0.98
-            if self.off_track[idx] > 2.0:
-                cp_z = self.track.checkpoints[self.cp_index[idx]]
-                player.z = cp_z
-                player.x = 0.0
-                player.vx = 0.0
-                player.speed = 0.0
-                self.off_track[idx] = 0.0
-        else:
-            self.off_track[idx] = 0.0
 
     # ---- drawing -------------------------------------------------------
     def draw_hud(self, surface, player, lap):
