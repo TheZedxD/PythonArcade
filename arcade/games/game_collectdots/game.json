@@ -1,0 +1,5 @@
+{
+  "title": "Collect Dots",
+  "entrypoint": "arcade.games.game_collectdots.game:CollectDotsState",
+  "description": "Collect dots while avoiding obstacles"
+}

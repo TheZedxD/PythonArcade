@@ -1,0 +1,5 @@
+{
+  "title": "Bomberman",
+  "entrypoint": "arcade.games.bomberman.game:BombermanGame",
+  "description": "Place bombs to defeat enemies"
+}

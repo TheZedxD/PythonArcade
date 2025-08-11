@@ -1,0 +1,5 @@
+{
+  "title": "Kart8",
+  "entrypoint": "arcade.games.kart8.game:KartGame",
+  "description": "Arcade kart racing"
+}

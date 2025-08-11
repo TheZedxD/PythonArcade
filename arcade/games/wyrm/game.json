@@ -1,0 +1,5 @@
+{
+  "title": "Wyrm",
+  "entrypoint": "arcade.games.wyrm.game:Game",
+  "description": "Classic snake-like game"
+}
