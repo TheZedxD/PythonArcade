@@ -69,6 +69,41 @@ Contributions are welcome. To verify your changes locally:
    pytest
    ```
 
+## Linux prerequisites
+
+Before running the arcade on Linux, install the necessary system packages.
+
+### Mint/Ubuntu/Debian
+
+```sh
+sudo apt-get install python3-venv python3-pip libsdl2-dev libsdl2-image-dev \
+    libsdl2-mixer-dev libsdl2-ttf-dev libfreetype6-dev libportmidi-dev
+```
+
+### Arch Linux
+
+```sh
+sudo pacman -S python python-pip python-virtualenv sdl2 sdl2_image sdl2_mixer \
+    sdl2_ttf portmidi freetype2
+```
+
+## One-shot fix
+
+For a quick setup, run the fix script for your platform:
+
+```sh
+# Linux
+bash scripts/fix.sh
+
+# Windows PowerShell
+powershell -ExecutionPolicy Bypass -File scripts/fix.ps1
+```
+
+## Branch protection
+
+In GitHub settings, enable branch protection and require the `all_green`
+status check to pass before merging pull requests.
+
 ## Games
 
 Currently included:
