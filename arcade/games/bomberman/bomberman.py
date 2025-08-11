@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 import random
+from typing import Optional
+
 import pygame
 
 from state import State
@@ -103,10 +105,10 @@ class BombermanGame(State):
         self.prev_volume = self.settings.get("sound_volume", 1.0)
         self.state = "settings"
         self.winner = 0
-        self.level: Level | None = None
+        self.level: Optional[Level] = None
         self.players: list[Player] = []
-        self.p1: Player | None = None
-        self.p2: Player | None = None
+        self.p1: Optional[Player] = None
+        self.p2: Optional[Player] = None
         self.enemies: list[Enemy] = []
         self.bombs: list[Bomb] = []
         self.explosions: list[Explosion] = []
@@ -408,11 +410,15 @@ class BombermanGame(State):
             if not enemy.update(dt, self.level, self.bombs, self.explosions):
                 self.enemies.remove(enemy)
         for bomb in list(self.bombs):
+            if bomb not in self.bombs:
+                # bomb may have been removed via chain reaction
+                continue
             if bomb.update(dt):
-                explosions, destroyed = bomb.explode(self.level)
+                explosions, destroyed = bomb.explode(self.level, self.bombs)
                 self.explosions.extend(explosions)
                 self._spawn_powerups(destroyed)
-                self.bombs.remove(bomb)
+                if bomb in self.bombs:
+                    self.bombs.remove(bomb)
         for expl in list(self.explosions):
             if expl.update(dt):
                 self.explosions.remove(expl)
