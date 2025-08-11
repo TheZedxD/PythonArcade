@@ -1,10 +1,14 @@
 [tool.black]
 line-length = 88
-target-version = ["py310"]
+target-version = ["py310","py311","py312"]
 
 [tool.ruff]
 line-length = 88
-
-[tool.ruff.lint]
-select = ["E", "F"]
+target-version = "py310"
+select = ["E","F","W","I","UP","B"]
 ignore = ["E501"]
+fix = true
+
+[tool.ruff.isort]
+known-first-party = ["pyarcade"]
+combine-as-imports = true

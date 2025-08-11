@@ -1,4 +1,4 @@
--r requirements.txt
-black
-ruff
-pytest
+ruff>=0.5.0
+black>=24.3.0
+pytest>=8.0.0
+pytest-timeout>=2.2.0
