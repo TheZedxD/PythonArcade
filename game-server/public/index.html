@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Python Arcade Online Lobby</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main id="app">
+      <section id="main-lobby" class="view">
+        <h1>Python Arcade – Online Lobby</h1>
+        <label for="username-input" class="sr-only">Enter your name</label>
+        <input
+          type="text"
+          id="username-input"
+          placeholder="Enter your name"
+          class="input-field"
+          style="margin-bottom: 1rem; width: 100%;"
+        />
+        <div class="section">
+          <h2>Play Online (P2P)</h2>
+          <div class="actions">
+            <input
+              type="text"
+              id="room-code-input"
+              placeholder="Room code"
+              class="input-field"
+            />
+            <button id="join-online-btn">Join</button>
+          </div>
+        </div>
+        <div class="section">
+          <h2>Local Network Games</h2>
+          <div id="game-selection"></div>
+        </div>
+      </section>
+
+      <section id="match-lobby" class="view hidden">
+        <h2>Match Lobby</h2>
+        <div class="player-card" id="player-card-1">
+          <span class="player-name">Waiting for player...</span>
+          <span class="player-status">Not Ready</span>
+        </div>
+        <div class="player-card" id="player-card-2">
+          <span class="player-name">Waiting for player...</span>
+          <span class="player-status">Not Ready</span>
+        </div>
+        <button id="ready-btn">Ready Up</button>
+        <button id="leave-room-btn">Leave Room</button>
+      </section>
+
+      <section id="game-view" class="view hidden">
+        <h2 id="turn-indicator">Waiting...</h2>
+        <div id="game-board"></div>
+        <div id="game-over-message" class="hidden">
+          <h3 id="winner-text"></h3>
+          <button id="play-again-btn">Play Again</button>
+        </div>
+      </section>
+    </main>
+
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js" integrity="sha384-WwBEmp6kAMPx/+qvOB0fOkHn84qxd6Q671O5jM90+hCbGyF/F7fs/3Gzdh0dX8Gk" crossorigin="anonymous"></script>
+    <script src="game.js"></script>
+  </body>
+</html>
