@@ -19,6 +19,8 @@ if [ -d "$ROOT/.venv" ]; then
 else
   "$PYTHON" -m venv "$ROOT/.venv"
 fi
+
+# Install Python dependencies inside the virtual environment
 "$ROOT/.venv/bin/python" -m pip install --upgrade pip
 "$ROOT/.venv/bin/python" -m pip install -r "$ROOT/requirements.txt" || true
 
@@ -56,36 +58,6 @@ pygame.display.flip()
 pygame.display.quit()
 pygame.quit()
 PY
-
-# Install or update the codextext TV app
-TV_DIR="${CODEXTEXT_PATH:-$HOME/.local/share/codextext}"
-if [ -d "$TV_DIR/.git" ]; then
-  git -C "$TV_DIR" pull --ff-only
-else
-  mkdir -p "$(dirname "$TV_DIR")"
-  git clone https://github.com/codextext/tv-app.git "$TV_DIR" || true
-fi
-
-# Wrapper script to launch the TV app
-sudo tee /usr/local/bin/run_tv.sh >/dev/null <<'EOF'
-#!/usr/bin/env bash
-set -euo pipefail
-exec "$HOME/.local/share/codextext/run.sh"
-EOF
-sudo chmod +x /usr/local/bin/run_tv.sh
-
-# Desktop entry for graphical launchers
-mkdir -p "$HOME/.local/share/applications"
-cat <<'EOF' > "$HOME/.local/share/applications/tv.desktop"
-[Desktop Entry]
-Type=Application
-Name=TV
-Exec=/usr/local/bin/run_tv.sh
-Icon=video-display
-Terminal=false
-Categories=Video;
-EOF
-update-desktop-database "$HOME/.local/share/applications" || true
 
 cat <<'EOS'
 Installation complete.
