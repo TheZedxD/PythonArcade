@@ -4,6 +4,8 @@ from datetime import datetime
 
 import pygame
 
+from ...common.theme import ACCENT_COLOR, BG_COLOR, PRIMARY_COLOR, draw_text, get_font
+from ...common.ui import PauseMenu, apply_pause_option
 from ...state import State
 from ...utils.persistence import load_json, save_json
 from ...utils.resources import save_path
@@ -62,16 +64,14 @@ class TetroidState(State):
 
     def startup(self, screen, num_players: int = 1):
         super().startup(screen, num_players)
-        self.font = pygame.font.SysFont("Courier", 24)
-        self.big_font = pygame.font.SysFont("Courier", 32)
-        self.rain_font = pygame.font.SysFont("Courier", 20)
+        self.rain_font = get_font(20)
         self.rain_chars = string.ascii_letters + string.digits
         self.rain_surfaces = {
-            ch: self.rain_font.render(ch, True, (0, 155, 0)) for ch in self.rain_chars
+            ch: self.rain_font.render(ch, True, ACCENT_COLOR) for ch in self.rain_chars
         }
-        self.normal_color = (0, 155, 0)
-        self.highlight_color = (0, 255, 0)
-        self.bg_color = (0, 0, 0)
+        self.normal_color = ACCENT_COLOR
+        self.highlight_color = PRIMARY_COLOR
+        self.bg_color = BG_COLOR
         self.cell = 24
         playfield_width = GRID_WIDTH * self.cell
         gap = 100
@@ -92,8 +92,9 @@ class TetroidState(State):
             self.board2 = self._create_board(self.playfield_x + playfield_width + gap)
             self.score2 = 0
         self.state = "instructions"
-        self.pause_options = ["Resume", "Volume -", "Volume +", "Fullscreen", "Quit"]
-        self.pause_index = 0
+        self.pause_menu = PauseMenu(
+            ["Resume", "Volume -", "Volume +", "Fullscreen", "Quit"], font_size=32
+        )
         self.settings = load_json(
             SETTINGS_PATH,
             {
@@ -214,7 +215,7 @@ class TetroidState(State):
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     self.state = "pause"
-                    self.pause_index = 0
+                    self.pause_menu.index = 0
                 # Player 1 controls
                 if not self.board1["gameover"]:
                     if event.key == pygame.K_LEFT and not self.collides(
@@ -262,37 +263,16 @@ class TetroidState(State):
                         ):
                             self.board2["current"]["y"] += 1
         elif self.state == "pause":
-            if event.type == pygame.KEYDOWN:
-                if event.key in (pygame.K_UP, pygame.K_w):
-                    self.pause_index = (self.pause_index - 1) % len(self.pause_options)
-                elif event.key in (pygame.K_DOWN, pygame.K_s):
-                    self.pause_index = (self.pause_index + 1) % len(self.pause_options)
-                elif event.key == pygame.K_RETURN:
-                    choice = self.pause_options[self.pause_index]
-                    if choice == "Resume":
-                        self.state = "play"
-                    elif choice == "Quit":
-                        self.update_stats()
-                        self.done = True
-                        self.next = "menu"
-                    elif choice == "Fullscreen":
-                        pygame.display.toggle_fullscreen()
-                        self.settings["fullscreen"] = not self.settings.get(
-                            "fullscreen", False
-                        )
-                        save_json(SETTINGS_PATH, self.settings)
-                    elif choice == "Volume +":
-                        vol = min(1.0, self.settings.get("sound_volume", 1.0) + 0.1)
-                        self.settings["sound_volume"] = round(vol, 2)
-                        pygame.mixer.music.set_volume(vol)
-                        save_json(SETTINGS_PATH, self.settings)
-                    elif choice == "Volume -":
-                        vol = max(0.0, self.settings.get("sound_volume", 1.0) - 0.1)
-                        self.settings["sound_volume"] = round(vol, 2)
-                        pygame.mixer.music.set_volume(vol)
-                        save_json(SETTINGS_PATH, self.settings)
-                elif event.key == pygame.K_ESCAPE:
+            choice = self.pause_menu.handle_keyboard(event)
+            if choice:
+                if choice == "Resume":
                     self.state = "play"
+                elif choice == "Quit":
+                    self.update_stats()
+                    self.done = True
+                    self.next = "menu"
+                else:
+                    apply_pause_option(choice, self.settings, SETTINGS_PATH)
         elif self.state == "gameover":
             if event.type == pygame.KEYDOWN:
                 self.done = True
@@ -311,7 +291,7 @@ class TetroidState(State):
                         self.board1["current"]["y"] += 1
                 elif event.button in (7, 9):
                     self.state = "pause"
-                    self.pause_index = 0
+                    self.pause_menu.index = 0
             elif event.type == pygame.JOYAXISMOTION:
                 if event.axis == 0:
                     if event.value < -0.5 and not self.collides(
@@ -344,45 +324,16 @@ class TetroidState(State):
                 elif y == 1:
                     self.rotate(self.board1)
         elif self.state == "pause":
-            if event.type in (pygame.JOYAXISMOTION, pygame.JOYHATMOTION):
-                if event.type == pygame.JOYHATMOTION:
-                    _, y = event.value
-                    vert = -y
-                else:
-                    if event.axis != 1:
-                        return
-                    vert = event.value
-                if vert < -0.5 or vert == -1:
-                    self.pause_index = (self.pause_index - 1) % len(self.pause_options)
-                elif vert > 0.5 or vert == 1:
-                    self.pause_index = (self.pause_index + 1) % len(self.pause_options)
-            elif event.type == pygame.JOYBUTTONDOWN:
-                if event.button == 0:
-                    choice = self.pause_options[self.pause_index]
-                    if choice == "Resume":
-                        self.state = "play"
-                    elif choice == "Quit":
-                        self.update_stats()
-                        self.done = True
-                        self.next = "menu"
-                    elif choice == "Fullscreen":
-                        pygame.display.toggle_fullscreen()
-                        self.settings["fullscreen"] = not self.settings.get(
-                            "fullscreen", False
-                        )
-                        save_json(SETTINGS_PATH, self.settings)
-                    elif choice == "Volume +":
-                        vol = min(1.0, self.settings.get("sound_volume", 1.0) + 0.1)
-                        self.settings["sound_volume"] = round(vol, 2)
-                        pygame.mixer.music.set_volume(vol)
-                        save_json(SETTINGS_PATH, self.settings)
-                    elif choice == "Volume -":
-                        vol = max(0.0, self.settings.get("sound_volume", 1.0) - 0.1)
-                        self.settings["sound_volume"] = round(vol, 2)
-                        pygame.mixer.music.set_volume(vol)
-                        save_json(SETTINGS_PATH, self.settings)
-                elif event.button in (1, 7, 9):
+            choice = self.pause_menu.handle_gamepad(event)
+            if choice:
+                if choice == "Resume":
                     self.state = "play"
+                elif choice == "Quit":
+                    self.update_stats()
+                    self.done = True
+                    self.next = "menu"
+                else:
+                    apply_pause_option(choice, self.settings, SETTINGS_PATH)
         elif self.state == "gameover":
             if event.type == pygame.JOYBUTTONDOWN:
                 self.done = True
@@ -491,50 +442,64 @@ class TetroidState(State):
                 if self.board2
                 else f"Score: {board['score']}"
             )
-            score_text = self.font.render(label, True, self.highlight_color)
-            self.screen.blit(score_text, (preview_x, preview_y + 120))
+            draw_text(self.screen, label, (preview_x, preview_y + 120), 24)
             if idx == 0:
-                hs_text = self.font.render(
-                    f"High: {self.high_score}", True, self.highlight_color
+                draw_text(
+                    self.screen,
+                    f"High: {self.high_score}",
+                    (preview_x, preview_y + 150),
+                    24,
                 )
-                self.screen.blit(hs_text, (preview_x, preview_y + 150))
 
         if self.state == "instructions":
-            text1 = self.big_font.render("TETROID", True, self.highlight_color)
+            draw_text(
+                self.screen,
+                "TETROID",
+                (width // 2, height // 3),
+                32,
+                center=True,
+            )
             if self.board2:
-                text2 = self.font.render(
-                    "P1: Arrows  P2: WASD", True, self.highlight_color
+                draw_text(
+                    self.screen,
+                    "P1: Arrows  P2: WASD",
+                    (width // 2, height // 2),
+                    24,
+                    center=True,
                 )
-                text3 = self.font.render("Press any key", True, self.highlight_color)
-                rect1 = text1.get_rect(center=(width // 2, height // 3))
-                rect2 = text2.get_rect(center=(width // 2, height // 2))
-                rect3 = text3.get_rect(center=(width // 2, height // 2 + 40))
-                self.screen.blit(text1, rect1)
-                self.screen.blit(text2, rect2)
-                self.screen.blit(text3, rect3)
+                draw_text(
+                    self.screen,
+                    "Press any key",
+                    (width // 2, height // 2 + 40),
+                    24,
+                    center=True,
+                )
             else:
-                text2 = self.font.render("Press any key", True, self.highlight_color)
-                rect1 = text1.get_rect(center=(width // 2, height // 3))
-                rect2 = text2.get_rect(center=(width // 2, height // 2))
-                self.screen.blit(text1, rect1)
-                self.screen.blit(text2, rect2)
-        elif self.state == "pause":
-            self.overlay.fill((0, 0, 0, 200))
-            self.screen.blit(self.overlay, (0, 0))
-            for i, option in enumerate(self.pause_options):
-                color = (
-                    self.highlight_color if i == self.pause_index else self.normal_color
+                draw_text(
+                    self.screen,
+                    "Press any key",
+                    (width // 2, height // 2),
+                    24,
+                    center=True,
                 )
-                prefix = "> " if i == self.pause_index else "  "
-                text = self.big_font.render(prefix + option, True, color)
-                rect = text.get_rect(center=(width // 2, height // 3 + i * 40))
-                self.screen.blit(text, rect)
-        elif self.state == "gameover":
-            self.overlay.fill((0, 0, 0, 200))
+        elif self.state == "pause":
+            self.overlay.fill((*self.bg_color, 200))
+            self.pause_menu.draw(self.overlay)
             self.screen.blit(self.overlay, (0, 0))
-            text1 = self.big_font.render("GAME OVER", True, self.highlight_color)
-            text2 = self.font.render("Press any key", True, self.highlight_color)
-            rect1 = text1.get_rect(center=(width // 2, height // 3))
-            rect2 = text2.get_rect(center=(width // 2, height // 2))
-            self.screen.blit(text1, rect1)
-            self.screen.blit(text2, rect2)
+        elif self.state == "gameover":
+            self.overlay.fill((*self.bg_color, 200))
+            self.screen.blit(self.overlay, (0, 0))
+            draw_text(
+                self.screen,
+                "GAME OVER",
+                (width // 2, height // 3),
+                32,
+                center=True,
+            )
+            draw_text(
+                self.screen,
+                "Press any key",
+                (width // 2, height // 2),
+                24,
+                center=True,
+            )

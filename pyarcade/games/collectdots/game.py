@@ -3,8 +3,8 @@ from datetime import datetime
 
 import pygame
 
-from ...common.theme import BG_COLOR, PRIMARY_COLOR, draw_text, get_font
-from ...common.ui import PauseMenu
+from ...common.theme import ACCENT_COLOR, BG_COLOR, PRIMARY_COLOR, draw_text, get_font
+from ...common.ui import PauseMenu, apply_pause_option
 from ...state import State
 from ...utils.persistence import load_json, save_json
 from ...utils.resources import save_path
@@ -16,7 +16,6 @@ HS_PATH = save_path("collectdots_highscores.json")
 class CollectDotsState(State):
     def startup(self, screen, num_players: int = 1):
         super().startup(screen, num_players)
-        self.font = get_font(24)
         self.score = 0
         self.score2 = 0
         cx, cy = screen.get_width() // 2, screen.get_height() // 2
@@ -75,22 +74,8 @@ class CollectDotsState(State):
                     self.update_stats()
                     self.done = True
                     self.next = "menu"
-                elif choice == "Fullscreen":
-                    pygame.display.toggle_fullscreen()
-                    self.settings["fullscreen"] = not self.settings.get(
-                        "fullscreen", False
-                    )
-                    save_json(SETTINGS_PATH, self.settings)
-                elif choice == "Volume +":
-                    vol = min(1.0, self.settings.get("sound_volume", 1.0) + 0.1)
-                    self.settings["sound_volume"] = round(vol, 2)
-                    pygame.mixer.music.set_volume(vol)
-                    save_json(SETTINGS_PATH, self.settings)
-                elif choice == "Volume -":
-                    vol = max(0.0, self.settings.get("sound_volume", 1.0) - 0.1)
-                    self.settings["sound_volume"] = round(vol, 2)
-                    pygame.mixer.music.set_volume(vol)
-                    save_json(SETTINGS_PATH, self.settings)
+                else:
+                    apply_pause_option(choice, self.settings, SETTINGS_PATH)
 
     def handle_gamepad(self, event):
         if self.state == "instructions":
@@ -124,22 +109,8 @@ class CollectDotsState(State):
                     self.update_stats()
                     self.done = True
                     self.next = "menu"
-                elif choice == "Fullscreen":
-                    pygame.display.toggle_fullscreen()
-                    self.settings["fullscreen"] = not self.settings.get(
-                        "fullscreen", False
-                    )
-                    save_json(SETTINGS_PATH, self.settings)
-                elif choice == "Volume +":
-                    vol = min(1.0, self.settings.get("sound_volume", 1.0) + 0.1)
-                    self.settings["sound_volume"] = round(vol, 2)
-                    pygame.mixer.music.set_volume(vol)
-                    save_json(SETTINGS_PATH, self.settings)
-                elif choice == "Volume -":
-                    vol = max(0.0, self.settings.get("sound_volume", 1.0) - 0.1)
-                    self.settings["sound_volume"] = round(vol, 2)
-                    pygame.mixer.music.set_volume(vol)
-                    save_json(SETTINGS_PATH, self.settings)
+                else:
+                    apply_pause_option(choice, self.settings, SETTINGS_PATH)
 
     def update_stats(self):
         best = self.score
@@ -251,19 +222,22 @@ class CollectDotsState(State):
 
         pygame.draw.rect(self.screen, PRIMARY_COLOR, self.player)
         if self.num_players == 2 and self.player2:
-            pygame.draw.rect(self.screen, (0, 0, 255), self.player2)
-        pygame.draw.ellipse(self.screen, (255, 0, 0), self.dot)
+            pygame.draw.rect(self.screen, ACCENT_COLOR, self.player2)
+        pygame.draw.ellipse(self.screen, PRIMARY_COLOR, self.dot)
         if self.num_players == 2:
-            score1 = self.font.render(f"P1: {self.score}", True, PRIMARY_COLOR)
-            score2 = self.font.render(f"P2: {self.score2}", True, PRIMARY_COLOR)
-            self.screen.blit(score1, (10, 10))
-            rect2 = score2.get_rect(topright=(self.screen.get_width() - 10, 10))
-            self.screen.blit(score2, rect2)
+            draw_text(self.screen, f"P1: {self.score}", (10, 10), 24)
+            font = get_font(24)
+            width = font.size(f"P2: {self.score2}")[0]
+            draw_text(
+                self.screen,
+                f"P2: {self.score2}",
+                (self.screen.get_width() - width - 10, 10),
+                24,
+            )
         else:
-            score_text = self.font.render(f"Score: {self.score}", True, PRIMARY_COLOR)
-            self.screen.blit(score_text, (10, 10))
+            draw_text(self.screen, f"Score: {self.score}", (10, 10), 24)
 
         if self.state == "pause":
-            self.overlay.fill((0, 0, 0, 200))
+            self.overlay.fill((*BG_COLOR, 200))
             self.pause_menu.draw(self.overlay)
             self.screen.blit(self.overlay, (0, 0))
