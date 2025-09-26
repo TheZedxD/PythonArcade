@@ -74,7 +74,9 @@ Contributions are welcome. To verify your changes locally:
 
 ## Linux prerequisites
 
-Before running the arcade on Linux, install the necessary system packages.
+The Linux install script automatically detects the system package manager and
+installs the SDL dependencies required by Pygame. If you would rather perform
+the setup manually, install the same packages with the commands below.
 
 ### Mint/Ubuntu/Debian
 
