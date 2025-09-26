@@ -1,4 +1,5 @@
 import json
+import logging
 import math
 import os
 import random
@@ -148,12 +149,19 @@ class MainMenuState(State):
                     elif choice == "Settings":
                         self.next = choice
                         self.done = True
+                        logging.info("Opening settings menu from main menu")
                     else:
                         self.selected_game = choice
+                        logging.info("Selected game '%s' from main menu", choice)
                         if choice == "bomberman":
                             self.game_options = {}
                             self.next = choice
                             self.done = True
+                            logging.info(
+                                "Starting '%s' with %s player(s)",
+                                choice,
+                                self.num_players,
+                            )
                         else:
                             self.phase = "players"
         elif self.phase == "players":
@@ -173,16 +181,33 @@ class MainMenuState(State):
                     self.game_options = {}
                     self.next = self.selected_game
                     self.done = True
+                    logging.info(
+                        "Starting '%s' with %s player(s)",
+                        self.selected_game,
+                        self.num_players,
+                    )
         elif self.phase == "items":
             if event.type == pygame.KEYDOWN:
                 if event.key in (pygame.K_y, pygame.K_1, pygame.K_KP1):
                     self.game_options = {"items": True}
                     self.next = self.selected_game
                     self.done = True
+                    logging.info(
+                        "Starting '%s' with %s player(s) (items=%s)",
+                        self.selected_game,
+                        self.num_players,
+                        True,
+                    )
                 elif event.key in (pygame.K_n, pygame.K_2, pygame.K_KP2):
                     self.game_options = {"items": False}
                     self.next = self.selected_game
                     self.done = True
+                    logging.info(
+                        "Starting '%s' with %s player(s) (items=%s)",
+                        self.selected_game,
+                        self.num_players,
+                        False,
+                    )
                 elif event.key == pygame.K_ESCAPE:
                     self.phase = "players"
 
@@ -196,12 +221,21 @@ class MainMenuState(State):
                     elif choice == "Settings":
                         self.next = choice
                         self.done = True
+                        logging.info("Opening settings menu from main menu (gamepad)")
                     else:
                         self.selected_game = choice
+                        logging.info(
+                            "Selected game '%s' from main menu (gamepad)", choice
+                        )
                         if choice == "bomberman":
                             self.game_options = {}
                             self.next = choice
                             self.done = True
+                            logging.info(
+                                "Starting '%s' with %s player(s) (gamepad)",
+                                choice,
+                                self.num_players,
+                            )
                         else:
                             self.phase = "players"
                 elif event.button in (1, 9):
@@ -235,16 +269,33 @@ class MainMenuState(State):
                     self.game_options = {}
                     self.next = self.selected_game
                     self.done = True
+                    logging.info(
+                        "Starting '%s' with %s player(s) (gamepad)",
+                        self.selected_game,
+                        self.num_players,
+                    )
         elif self.phase == "items":
             if event.type == pygame.JOYBUTTONDOWN:
                 if event.button == 0:
                     self.game_options = {"items": True}
                     self.next = self.selected_game
                     self.done = True
+                    logging.info(
+                        "Starting '%s' with %s player(s) (items=%s, gamepad)",
+                        self.selected_game,
+                        self.num_players,
+                        True,
+                    )
                 elif event.button == 1:
                     self.game_options = {"items": False}
                     self.next = self.selected_game
                     self.done = True
+                    logging.info(
+                        "Starting '%s' with %s player(s) (items=%s, gamepad)",
+                        self.selected_game,
+                        self.num_players,
+                        False,
+                    )
                 elif event.button in (7, 9):
                     self.phase = "players"
 

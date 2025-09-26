@@ -44,6 +44,9 @@ scripts\update_windows.bat
 - On Linux a graphical environment is required. If you see `pygame.error: No available video device`,
   install SDL libraries or run with `SDL_VIDEODRIVER=dummy`.
 - Updating graphics drivers often fixes window creation or performance issues.
+- Gameplay and menu activity is logged to `arcade.log` in the save directory
+  (`~/.local/share/PythonArcade` on Linux/macOS, `%APPDATA%\PythonArcade` on
+  Windows). Check this file for error details if a game fails to load or crashes.
 
 ## Development & Testing
 

@@ -1,4 +1,5 @@
 import importlib
+import logging
 import os
 
 import pygame
@@ -40,13 +41,24 @@ def load_games():
                         and obj is not State
                     ):
                         games[name] = obj()
+                        logging.info("Loaded game: %s", name)
                         break
             except Exception:
+                logging.exception("Failed to load game module '%s'", module_name)
                 continue
+    logging.info("Available games: %s", ", ".join(sorted(games)))
     return games
 
 
 def main():
+    log_file = save_path("arcade.log")
+    logging.basicConfig(
+        filename=str(log_file),
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(message)s",
+    )
+    logging.info("Arcade launched")
+
     pygame.init()
     pygame.joystick.init()
     joysticks = []
@@ -105,9 +117,19 @@ def main():
             else:
                 current_state.get_event(event)
 
-        current_state.update(dt)
-        current_state.draw()
-        pygame.display.flip()
+        had_error = False
+        try:
+            current_state.update(dt)
+            current_state.draw()
+        except Exception:
+            logging.exception(
+                "Unhandled error in state '%s'", current_state.__class__.__name__
+            )
+            current_state.done = True
+            current_state.next = "menu"
+            had_error = True
+        else:
+            pygame.display.flip()
         if os.environ.get("PYARCADE_DEBUG_FPS") == "1":
             pygame.display.set_caption(f"Arcade {clock.get_fps():.1f} FPS")
 
@@ -132,8 +154,16 @@ def main():
             if next_state:
                 # pass through any options the current state collected
                 opts = getattr(current_state, "game_options", {})
+                logging.info(
+                    "Transitioning to state '%s' (players=%s, options=%s)",
+                    current_state.next,
+                    getattr(current_state, "num_players", 1),
+                    opts,
+                )
                 next_state.startup(screen, current_state.num_players, **opts)
                 current_state = next_state
+                if had_error and current_state is menu:
+                    logging.info("Returned to main menu after error")
 
     pygame.quit()
 
