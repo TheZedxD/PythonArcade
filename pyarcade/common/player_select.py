@@ -66,9 +66,17 @@ class PlayerSelectOverlay:
             x2 = w//2 + gap//2
             y  = h//2 - btn_h//2
 
-            # outlines
-            pygame.draw.rect(screen, ACCENT_COLOR if self.index==0 else PRIMARY_COLOR, (x1, y, btn_w, btn_h), 3, border_radius=16)
-            pygame.draw.rect(screen, ACCENT_COLOR if self.index==1 else PRIMARY_COLOR, (x2, y, btn_w, btn_h), 3, border_radius=16)
+            # outlines with a subtle glow effect for the selected option
+            button_rects = [
+                pygame.Rect(x1, y, btn_w, btn_h),
+                pygame.Rect(x2, y, btn_w, btn_h),
+            ]
+            for idx, rect in enumerate(button_rects):
+                highlighted = idx == self.index
+                base_color = PRIMARY_COLOR if highlighted else ACCENT_COLOR
+                glow_color = ACCENT_COLOR if highlighted else PRIMARY_COLOR
+                pygame.draw.rect(screen, glow_color, rect, 6, border_radius=20)
+                pygame.draw.rect(screen, base_color, rect, 2, border_radius=12)
 
             # labels
             draw_text(screen, "1", font_opt, PRIMARY_COLOR, center=(x1+btn_w//2, y+btn_h//2))
