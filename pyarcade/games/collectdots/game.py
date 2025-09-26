@@ -14,12 +14,17 @@ HS_PATH = save_path("collectdots_highscores.json")
 
 
 class CollectDotsState(State):
+    def __init__(self, *, players: int = 1, **kwargs):
+        super().__init__(**kwargs)
+        self.players = 1 if players not in (1, 2) else players
+        self.num_players = self.players
+
     def startup(self, screen, num_players: int = 1):
         super().startup(screen, num_players)
         self.score = 0
         self.score2 = 0
         cx, cy = screen.get_width() // 2, screen.get_height() // 2
-        if self.num_players == 2:
+        if self.players == 2:
             self.player = pygame.Rect(cx - 32, cy - 16, 32, 32)
             self.player2 = pygame.Rect(cx, cy - 16, 32, 32)
         else:
@@ -114,7 +119,7 @@ class CollectDotsState(State):
 
     def update_stats(self):
         best = self.score
-        if self.num_players == 2:
+        if self.players == 2:
             best = max(self.score, self.score2)
         if best > self.high_score:
             self.high_score = best
@@ -129,7 +134,7 @@ class CollectDotsState(State):
                 pygame.mixer.music.set_volume(self.settings.get("sound_volume", 1.0))
             return
         keys = pygame.key.get_pressed()
-        if self.num_players == 2:
+        if self.players == 2:
             dx1 = dy1 = dx2 = dy2 = 0
             if keys[pygame.K_LEFT]:
                 dx1 -= 1
@@ -183,7 +188,7 @@ class CollectDotsState(State):
     def draw(self):
         self.screen.fill(BG_COLOR)
         if self.state == "instructions":
-            if self.num_players == 2:
+            if self.players == 2:
                 draw_text(
                     self.screen,
                     "P1: Arrows  P2: WASD",
@@ -221,10 +226,10 @@ class CollectDotsState(State):
             return
 
         pygame.draw.rect(self.screen, PRIMARY_COLOR, self.player)
-        if self.num_players == 2 and self.player2:
+        if self.players == 2 and self.player2:
             pygame.draw.rect(self.screen, ACCENT_COLOR, self.player2)
         pygame.draw.ellipse(self.screen, PRIMARY_COLOR, self.dot)
-        if self.num_players == 2:
+        if self.players == 2:
             draw_text(self.screen, f"P1: {self.score}", (10, 10), 24)
             font = get_font(24)
             width = font.size(f"P2: {self.score2}")[0]

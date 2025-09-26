@@ -25,6 +25,11 @@ COLORS = [(255, 0, 0), (0, 0, 255), (255, 255, 0)]  # Red  # Blue  # Yellow
 class VirusState(State):
     """Virus (Dr. Mario clone) game state with a Matrix-style aesthetic."""
 
+    def __init__(self, *, players: int = 1, **kwargs):
+        super().__init__(**kwargs)
+        self.players = 1 if players not in (1, 2) else players
+        self.num_players = self.players
+
     def startup(self, screen, num_players: int = 1):
         super().startup(screen, num_players)
         # Initialize fonts (using a terminal-style font)
@@ -38,7 +43,7 @@ class VirusState(State):
         playfield_width = GRID_WIDTH * self.cell
         gap = 100
         screen_width, _ = self.screen.get_size()
-        if self.num_players == 2:
+        if self.players == 2:
             total_width = playfield_width * 2 + gap
             self.playfield_x = (screen_width - total_width) // 2
         else:
@@ -49,7 +54,7 @@ class VirusState(State):
         self.board2 = None
         self.score = 0
         self.score2 = 0
-        if self.num_players == 2:
+        if self.players == 2:
             self.board2 = self._create_board(self.playfield_x + playfield_width + gap)
             self.score2 = 0
         # Place initial viruses on board1 (and copy to board2 for fairness in 2P)
@@ -158,7 +163,7 @@ class VirusState(State):
         if self._collides(board, board["current"], dx=0, dy=0):
             board["gameover"] = True
             # End game if this is a single-player game or both players are blocked
-            if self.num_players == 1 or (
+            if self.players == 1 or (
                 self.board1["gameover"] and (not self.board2 or self.board2["gameover"])
             ):
                 self.state = "gameover"
@@ -271,7 +276,7 @@ class VirusState(State):
         # Update score for cleared blocks
         board["score"] += len(to_clear) * 100
         # Apply opponent penalty for viruses cleared
-        if viruses_cleared > 0 and self.num_players == 2:
+        if viruses_cleared > 0 and self.players == 2:
             other_board = self.board2 if board is self.board1 else self.board1
             deduction = viruses_cleared * 100
             other_board["score"] = max(0, other_board["score"] - deduction)
@@ -335,7 +340,7 @@ class VirusState(State):
                     viruses_cleared_again += 1
                 grid[r][c] = None
             board["score"] += len(to_clear_again) * 100
-            if viruses_cleared_again > 0 and self.num_players == 2:
+            if viruses_cleared_again > 0 and self.players == 2:
                 other_board = self.board2 if board is self.board1 else self.board1
                 deduction = viruses_cleared_again * 100
                 other_board["score"] = max(0, other_board["score"] - deduction)
@@ -371,7 +376,7 @@ class VirusState(State):
         # Handle keyboard input for different game states
         if self.state == "instructions":
             if event.type == pygame.KEYDOWN:
-                if self.num_players == 2:
+                if self.players == 2:
                     # In 2-player mode, wait for mode selection (1,2,3 keys)
                     if event.key in (pygame.K_1, pygame.K_KP1):
                         self.time_left = 60  # 1-minute Blitz
@@ -416,7 +421,7 @@ class VirusState(State):
                             self.board1["current"]["y"] += 1
                 # Player 2 controls (WASD + F) if in 2-player mode
                 if (
-                    self.num_players == 2
+                    self.players == 2
                     and self.board2
                     and not self.board2["gameover"]
                 ):
@@ -460,7 +465,7 @@ class VirusState(State):
         # Allow gamepad control (primarily for player 1)
         if self.state == "instructions":
             if event.type == pygame.JOYBUTTONDOWN:
-                if self.num_players == 2:
+                if self.players == 2:
                     # Default to Normal (2 min) if using gamepad to start
                     self.time_left = 120
                 self.state = "play"
@@ -558,7 +563,7 @@ class VirusState(State):
                     self._lock_piece(board)
                     self._clear_matches(board)
                     # If single-player and all viruses cleared, trigger win
-                    if self.num_players == 1 and len(board["viruses"]) == 0:
+                    if self.players == 1 and len(board["viruses"]) == 0:
                         self.state = "gameover"
                         self.win = True
                         self.update_stats()
@@ -570,7 +575,7 @@ class VirusState(State):
         if self.board2:
             self.score2 = self.board2["score"]
         # Decrease timer in 2-player mode and end game when time is up
-        if self.num_players == 2:
+        if self.players == 2:
             self.time_left -= dt
             if self.time_left <= 0:
                 self.time_left = 0
@@ -712,7 +717,7 @@ class VirusState(State):
             overlay = pygame.Surface(self.screen.get_size(), pygame.SRCALPHA)
             overlay.fill((*self.bg_color, 200))
             self.screen.blit(overlay, (0, 0))
-            if self.num_players == 2:
+            if self.players == 2:
                 # Show "TIME UP" if ended by timer, otherwise "GAME OVER"
                 title = "TIME UP" if getattr(self, "time_up", False) else "GAME OVER"
                 result_text = ""

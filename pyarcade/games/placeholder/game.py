@@ -4,6 +4,11 @@ from ...state import State
 
 
 class PlaceholderGameState(State):
+    def __init__(self, *, players: int = 1, **kwargs):
+        super().__init__(**kwargs)
+        self.players = 1 if players not in (1, 2) else players
+        self.num_players = self.players
+
     def startup(self, screen, num_players: int = 1):
         super().startup(screen, num_players)
         self.font = pygame.font.SysFont("Courier", 36)

@@ -62,6 +62,11 @@ SCORES = {1: 40, 2: 100, 3: 300, 4: 1200}
 class TetroidState(State):
     """Matrix-themed Tetris clone."""
 
+    def __init__(self, *, players: int = 1, **kwargs):
+        super().__init__(**kwargs)
+        self.players = 1 if players not in (1, 2) else players
+        self.num_players = self.players
+
     def startup(self, screen, num_players: int = 1):
         super().startup(screen, num_players)
         self.rain_font = get_font(20)
@@ -76,7 +81,7 @@ class TetroidState(State):
         playfield_width = GRID_WIDTH * self.cell
         gap = 100
         screen_width, _ = self.screen.get_size()
-        if self.num_players == 2:
+        if self.players == 2:
             total_width = playfield_width * 2 + gap
             self.playfield_x = (screen_width - total_width) // 2
         else:
@@ -88,7 +93,7 @@ class TetroidState(State):
         self.board2 = None
         self.score = 0
         self.score2 = 0
-        if self.num_players == 2:
+        if self.players == 2:
             self.board2 = self._create_board(self.playfield_x + playfield_width + gap)
             self.score2 = 0
         self.state = "instructions"
@@ -153,7 +158,7 @@ class TetroidState(State):
         board["next_piece"] = self.random_piece()
         if self.collides(board, board["current"], 0, 0):
             board["gameover"] = True
-            if self.num_players == 1 or (
+            if self.players == 1 or (
                 self.board1["gameover"] and (not self.board2 or self.board2["gameover"])
             ):
                 self.state = "gameover"
@@ -239,7 +244,7 @@ class TetroidState(State):
                             self.board1["current"]["y"] += 1
                 # Player 2 controls
                 if (
-                    self.num_players == 2
+                    self.players == 2
                     and self.board2
                     and not self.board2["gameover"]
                 ):

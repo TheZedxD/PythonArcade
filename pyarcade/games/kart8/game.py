@@ -28,6 +28,11 @@ NUM_LAPS = 2
 
 
 class KartGame(State):
+    def __init__(self, *, players: int = 1, **kwargs):
+        super().__init__(**kwargs)
+        self.players = 1 if players not in (1, 2) else players
+        self.num_players = self.players
+
     def startup(self, screen, num_players: int = 1, items: bool = True, **opts):
         super().startup(screen, num_players, **opts)
         self.track = create_demo_track()
@@ -44,15 +49,15 @@ class KartGame(State):
         if pygame.mixer.get_init():
             pygame.mixer.music.set_volume(self.volume)
 
-        self.players = [Car(self.track)]
-        if num_players > 1:
-            self.players.append(Car(self.track, color=(255, 255, 0)))
+        self.karts = [Car(self.track)]
+        if self.players > 1:
+            self.karts.append(Car(self.track, color=(255, 255, 0)))
             self.ghost = None
         else:
             self.ghost = Ghost(self.track, self.difficulty)
-        self.laps = [0 for _ in self.players]
-        self.lap_times = [[] for _ in self.players]
-        self.timers = [0.0 for _ in self.players]
+        self.laps = [0 for _ in self.karts]
+        self.lap_times = [[] for _ in self.karts]
+        self.timers = [0.0 for _ in self.karts]
         self.font = pygame.font.SysFont("Courier", 20)
         self.hud_color = (0, 255, 0)
         self.create_help_surface()
@@ -64,7 +69,7 @@ class KartGame(State):
         w, h = self.screen.get_size()
         self.renderers = []
         self.cameras = []
-        if self.num_players == 1:
+        if self.players == 1:
             surf = pygame.Surface((w, h))
             if pygame.display.get_surface():
                 surf = surf.convert()
@@ -142,7 +147,7 @@ class KartGame(State):
             elif event.key == pygame.K_ESCAPE:
                 self.done = True
                 self.next = "menu"
-            elif event.key == pygame.K_TAB and self.num_players > 1:
+            elif event.key == pygame.K_TAB and self.players > 1:
                 self.layout = "horizontal" if self.layout == "vertical" else "vertical"
                 self.data["settings"]["layout"] = self.layout
                 save_json(str(SAVE_PATH), self.data)
@@ -183,17 +188,17 @@ class KartGame(State):
             "right": keys[pygame.K_d],
         }
         boost1 = keys[pygame.K_LSHIFT]
-        prev_z1 = self.players[0].z
-        self.players[0].update(dt, controls1, boost1)
+        prev_z1 = self.karts[0].z
+        self.karts[0].update(dt, controls1, boost1)
         self.timers[0] += dt
-        if prev_z1 > self.players[0].z:
+        if prev_z1 > self.karts[0].z:
             self.laps[0] += 1
             self.lap_times[0].append(self.timers[0])
             self.timers[0] = 0.0
             if len(self.lap_times[0]) >= NUM_LAPS:
                 self.record_time(0)
 
-        if self.num_players > 1:
+        if self.players > 1:
             controls2 = {
                 "accelerate": keys[pygame.K_UP],
                 "brake": keys[pygame.K_DOWN],
@@ -201,17 +206,17 @@ class KartGame(State):
                 "right": keys[pygame.K_RIGHT],
             }
             boost2 = keys[pygame.K_RCTRL]
-            prev_z2 = self.players[1].z
-            self.players[1].update(dt, controls2, boost2)
+            prev_z2 = self.karts[1].z
+            self.karts[1].update(dt, controls2, boost2)
             self.timers[1] += dt
-            if prev_z2 > self.players[1].z:
+            if prev_z2 > self.karts[1].z:
                 self.laps[1] += 1
                 self.lap_times[1].append(self.timers[1])
                 self.timers[1] = 0.0
                 if len(self.lap_times[1]) >= NUM_LAPS:
                     self.record_time(1)
         elif self.ghost:
-            self.ghost.update(dt, self.players[0].z)
+            self.ghost.update(dt, self.karts[0].z)
 
         # move shells and handle collisions
         if self.items_enabled:
@@ -220,7 +225,7 @@ class KartGame(State):
                     item["z"] = (
                         item["z"] + item.get("speed", 0) * dt
                     ) % self.track.total_length
-            for p in self.players:
+            for p in self.karts:
                 for item in self.track.items:
                     if not item.get("active", True):
                         continue
@@ -249,7 +254,7 @@ class KartGame(State):
             surface.blit(m, (surface.get_width() - m.get_width() - 5, 5))
 
     def record_time(self, player_index: int):
-        mode = "1p" if self.num_players == 1 else "2p"
+        mode = "1p" if self.players == 1 else "2p"
         times = self.data.setdefault("times", {}).setdefault(
             mode, {"last": [], "best": []}
         )
@@ -261,25 +266,25 @@ class KartGame(State):
 
     def draw(self):
         self.screen.fill((0, 0, 0))
-        if self.num_players == 1:
+        if self.players == 1:
             self.renderers[0].render(
                 self.cameras[0],
-                self.players[0],
+                self.karts[0],
                 [self.ghost] if self.ghost else None,
                 self.track.items if self.items_enabled else None,
             )
-            self.draw_hud(self.cameras[0], self.players[0], self.laps[0])
+            self.draw_hud(self.cameras[0], self.karts[0], self.laps[0])
             self.screen.blit(self.cameras[0], (0, 0))
         else:
             for i in range(2):
-                others = [self.players[1 - i]]
+                others = [self.karts[1 - i]]
                 self.renderers[i].render(
                     self.cameras[i],
-                    self.players[i],
+                    self.karts[i],
                     others,
                     self.track.items if self.items_enabled else None,
                 )
-                self.draw_hud(self.cameras[i], self.players[i], self.laps[i])
+                self.draw_hud(self.cameras[i], self.karts[i], self.laps[i])
             if self.layout == "vertical":
                 h = self.screen.get_height() // 2
                 self.screen.blit(self.cameras[0], (0, 0))
