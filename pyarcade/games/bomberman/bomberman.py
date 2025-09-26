@@ -41,6 +41,11 @@ DEFAULT_CONFIG = {
 class BombermanGame(State):
     fps_cap = 60
 
+    def __init__(self, *, players: int = 1, **kwargs):
+        super().__init__(**kwargs)
+        self.players = 1 if players not in (1, 2) else players
+        self.num_players = self.players
+
     def startup(self, screen, num_players: int = 1, **opts):
         super().startup(screen, num_players, **opts)
         cfg = load_json(CONFIG_PATH, DEFAULT_CONFIG)
@@ -89,14 +94,15 @@ class BombermanGame(State):
             "Back",
         ]
         self.settings_index = 0
-        self.mode = 1
         self.map_sizes = [
             ("Small", (13, 11)),
             ("Medium", (15, 13)),
             ("Large", (17, 15)),
         ]
         self.map_size_index = 1
-        self.enemy_count = self.config.get("enemy_count", 3)
+        self.enemy_count = (
+            0 if self.players == 2 else self.config.get("enemy_count", 3)
+        )
         self.fuse_ms = self.config.get("fuse_ms", 2000)
         self.max_bombs = self.config.get("max_bombs_per_player", 1)
         self.audio_on = True
@@ -104,7 +110,7 @@ class BombermanGame(State):
         self.state = "settings"
         self.winner = 0
         self.level: Level | None = None
-        self.players: list[Player] = []
+        self.active_players: list[Player] = []
         self.p1: Player | None = None
         self.p2: Player | None = None
         self.enemies: list[Enemy] = []
@@ -169,16 +175,19 @@ class BombermanGame(State):
 
         return assets
 
-    def _start_game(self, num_players: int) -> None:
+    def _start_game(self, players: int | None = None) -> None:
         """Initialise a new round."""
 
+        if players in (1, 2):
+            self.players = players
+        players = self.players
+        self.num_players = self.players
         width, height = self.config.get("map_size", [15, 13])
         self.level = Level.generate_random(width, height)
-        self.players = []
+        self.active_players = []
         self.bombs = []
         self.explosions = []
         self.powerups = []
-        self.num_players = num_players
         p1_controls = Controls(
             up=pygame.K_UP,
             down=pygame.K_DOWN,
@@ -189,8 +198,8 @@ class BombermanGame(State):
         self.p1 = Player(1, 1, p1_controls, self.assets["player1"])
         self.p1.radius = self.config.get("base_blast_radius", 2)
         self.p1.max_bombs = self.config.get("max_bombs_per_player", 1)
-        self.players.append(self.p1)
-        if num_players == 2:
+        self.active_players.append(self.p1)
+        if players == 2:
             p2_controls = Controls(
                 up=pygame.K_w,
                 down=pygame.K_s,
@@ -206,13 +215,13 @@ class BombermanGame(State):
             )
             self.p2.radius = self.config.get("base_blast_radius", 2)
             self.p2.max_bombs = self.config.get("max_bombs_per_player", 1)
-            self.players.append(self.p2)
+            self.active_players.append(self.p2)
             self.enemies = []
         else:
             self.p2 = None
             self.enemies = self._spawn_enemies()
         self.game_timer = 0.0
-        self.time_limit = 0 if num_players == 2 else self.config.get("time_limit", 0)
+        self.time_limit = 0 if players == 2 else self.config.get("time_limit", 0)
         if self.time_limit > 0:
             self.time_left = float(self.time_limit)
         self.state = "play"
@@ -225,7 +234,7 @@ class BombermanGame(State):
                 y = random.randint(1, self.level.height - 2)
                 if self.level.is_blocked(x, y):
                     continue
-                if (x, y) in [(p.x, p.y) for p in self.players]:
+                if (x, y) in [(p.x, p.y) for p in self.active_players]:
                     continue
                 enemies.append(Enemy(x, y, self.assets["enemy"], self.enemy_speed))
                 break
@@ -243,16 +252,16 @@ class BombermanGame(State):
         """Remove players caught in explosions."""
 
         tiles = {(e.x, e.y) for e in self.explosions}
-        for player in list(self.players):
+        for player in list(self.active_players):
             if (player.x, player.y) in tiles:
-                self.players.remove(player)
+                self.active_players.remove(player)
 
     def _collect_powerups(self) -> None:
         """Check for player collisions with power-ups."""
 
         max_radius = self.config.get("max_blast_radius", 5)
         for powerup in list(self.powerups):
-            for player in self.players:
+            for player in self.active_players:
                 if player.x == powerup.x and player.y == powerup.y:
                     if powerup.kind == "radius":
                         player.radius = min(player.radius + 1, max_radius)
@@ -267,7 +276,7 @@ class BombermanGame(State):
         self.bombs.clear()
         self.explosions.clear()
         self.powerups.clear()
-        for i, player in enumerate(self.players):
+        for i, player in enumerate(self.active_players):
             if i == 0:
                 player.x, player.y = 1, 1
             else:
@@ -280,11 +289,12 @@ class BombermanGame(State):
 
     def _option_value(self, option: str) -> str:
         if option == "Mode":
-            return "1P" if self.mode == 1 else "2P"
+            label = "1P" if self.players == 1 else "2P"
+            return f"{label} (launcher)"
         if option == "Map Size":
             return self.map_sizes[self.map_size_index][0]
         if option == "Enemy Count":
-            return str(self.enemy_count) if self.mode == 1 else "N/A"
+            return str(self.enemy_count) if self.players == 1 else "N/A"
         if option == "Bomb Fuse":
             return f"{self.fuse_ms} ms"
         if option == "Max Bombs":
@@ -296,10 +306,10 @@ class BombermanGame(State):
     def _adjust(self, delta: int) -> None:
         option = self.settings_options[self.settings_index]
         if option == "Mode":
-            self.mode = 1 if self.mode == 2 else 2
+            return
         elif option == "Map Size":
             self.map_size_index = (self.map_size_index + delta) % len(self.map_sizes)
-        elif option == "Enemy Count" and self.mode == 1:
+        elif option == "Enemy Count" and self.players == 1:
             limit = self.config.get("max_enemy_count", 9)
             self.enemy_count = max(0, min(limit, self.enemy_count + delta))
         elif option == "Bomb Fuse":
@@ -314,7 +324,7 @@ class BombermanGame(State):
 
     def _apply_settings(self) -> None:
         self.config["map_size"] = list(self.map_sizes[self.map_size_index][1])
-        self.config["enemy_count"] = self.enemy_count if self.mode == 1 else 0
+        self.config["enemy_count"] = self.enemy_count if self.players == 1 else 0
         self.config["fuse_ms"] = self.fuse_ms
         self.config["max_bombs_per_player"] = self.max_bombs
         pygame.mixer.music.set_volume(self.prev_volume if self.audio_on else 0)
@@ -339,7 +349,7 @@ class BombermanGame(State):
                     option = self.settings_options[self.settings_index]
                     if option == "Start":
                         self._apply_settings()
-                        self._start_game(self.mode)
+                        self._start_game()
                     elif option in ("Back", "Menu"):
                         self.done = True
                         self.next = "menu"
@@ -351,7 +361,7 @@ class BombermanGame(State):
                 if event.key == pygame.K_ESCAPE:
                     self.state = "pause"
                     self.pause_menu.index = 0
-                for player in self.players:
+                for player in self.active_players:
                     if event.key == player.controls.bomb:
                         player.drop_bomb(self.bombs, self.config.get("fuse_ms", 2000))
         elif self.state == "pause":
@@ -364,7 +374,7 @@ class BombermanGame(State):
         elif self.state == "victory":
             choice = self.victory_menu.handle_keyboard(event)
             if choice == "Restart":
-                self._start_game(self.num_players)
+                self._start_game()
             elif choice == "Return to Menu":
                 self.done = True
                 self.next = "menu"
@@ -402,7 +412,7 @@ class BombermanGame(State):
         else:
             self.game_timer += dt
         keys = pygame.key.get_pressed()
-        for player in self.players:
+        for player in self.active_players:
             player.handle_input(keys, self.level, self.bombs)
         for enemy in list(self.enemies):
             if not enemy.update(dt, self.level, self.bombs, self.explosions):
@@ -422,19 +432,19 @@ class BombermanGame(State):
                 self.explosions.remove(expl)
         self._check_deaths()
         self._collect_powerups()
-        if self.num_players == 1:
-            if not self.players:
+        if self.players == 1:
+            if not self.active_players:
                 self.state = "defeat"
                 self.end_timer = 2.0
             elif not self.enemies:
                 self.state = "cleared"
                 self.end_timer = 2.0
         else:
-            if len(self.players) == 1:
-                self.winner = 1 if self.players[0] is self.p1 else 2
+            if len(self.active_players) == 1:
+                self.winner = 1 if self.active_players[0] is self.p1 else 2
                 self.state = "victory"
                 self.victory_menu.index = 0
-            elif len(self.players) == 0:
+            elif len(self.active_players) == 0:
                 self.winner = 0
                 self.state = "victory"
                 self.victory_menu.index = 0
@@ -479,12 +489,12 @@ class BombermanGame(State):
             expl.draw(self.screen, self.assets["blast"])
         for enemy in self.enemies:
             enemy.draw(self.screen)
-        for player in self.players:
+        for player in self.active_players:
             player.draw(self.screen)
         # HUD
-        mode_text = f"{'1P' if self.num_players == 1 else '2P'} Mode"
+        mode_text = f"{'1P' if self.players == 1 else '2P'} Mode"
         draw_text(self.screen, mode_text, (10, 10), 24, PRIMARY_COLOR)
-        if self.num_players == 1:
+        if self.players == 1:
             draw_text(
                 self.screen,
                 f"Enemies: {len(self.enemies)}",
@@ -544,7 +554,7 @@ class BombermanGame(State):
     def cleanup(self) -> None:
         pygame.mixer.music.set_volume(self.prev_volume)
         self.level = None
-        self.players.clear()
+        self.active_players.clear()
         self.enemies.clear()
         self.bombs.clear()
         self.explosions.clear()

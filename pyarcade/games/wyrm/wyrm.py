@@ -16,8 +16,10 @@ MOVE_DELAY = 0.2
 class WyrmGame(State):
     """Minimal Centipede-style game."""
 
-    def __init__(self, players: int = 1) -> None:
-        super().__init__(players=players)
+    def __init__(self, *, players: int = 1, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self.players = 1 if players not in (1, 2) else players
+        self.num_players = self.players
         self.score1 = 0
         self.score2 = 0
         self.lives1 = 3
@@ -122,7 +124,7 @@ class WyrmGame(State):
                     self.shot_sound.play()
 
             # Player 2 controls (WASD + left ctrl)
-            if self.num_players > 1:
+            if self.players > 1:
                 if event.key == pygame.K_a:
                     self.player2[0] = max(0, self.player2[0] - 1)
                 elif event.key == pygame.K_d:
@@ -212,7 +214,7 @@ class WyrmGame(State):
                 if self.lives1 > 0 and tuple(self.player1) == seg:
                     self._player_hit(1)
                 if (
-                    self.num_players > 1
+                    self.players > 1
                     and self.lives2 > 0
                     and tuple(self.player2) == seg
                 ):
@@ -258,7 +260,7 @@ class WyrmGame(State):
     def _player_hit(self, player: int) -> None:
         if player == 1:
             self.lives1 -= 1
-            if self.lives1 <= 0 and (self.num_players == 1 or self.lives2 <= 0):
+            if self.lives1 <= 0 and (self.players == 1 or self.lives2 <= 0):
                 self.done = True
                 self.next = "menu"
             elif self.lives1 > 0:
@@ -298,7 +300,7 @@ class WyrmGame(State):
                 PRIMARY_COLOR,
                 (px * GRID_SIZE, py * GRID_SIZE, GRID_SIZE, GRID_SIZE),
             )
-        if self.num_players > 1 and self.lives2 > 0:
+        if self.players > 1 and self.lives2 > 0:
             px, py = self.player2
             pygame.draw.rect(
                 self.screen,
@@ -325,7 +327,7 @@ class WyrmGame(State):
             (5, 5),
             20,
         )
-        if self.num_players > 1:
+        if self.players > 1:
             label = f"P2: {self.score2} L{self.lives2}"
             width = font.size(label)[0]
             draw_text(

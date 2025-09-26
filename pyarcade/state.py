@@ -4,16 +4,20 @@ import pygame
 class State:
     """Base class for game states."""
 
-    def __init__(self, players: int = 1):
+    def __init__(self, **_):
         self.done = False
         self.quit = False
         self.next = None
         self.screen = None
-        self.num_players = players
+        # ``players`` is normalised to either 1 or 2 and stored on both
+        # ``players`` and ``num_players`` so older code can keep working while
+        # newer games migrate to the new attribute.
+        self.players = 1
+        self.num_players = 1
         # arbitrary options passed when the state starts
         self.options = {}
 
-    def startup(self, screen, num_players: int = 1, **options):
+    def startup(self, screen, num_players: int | None = None, **options):
         """Called when the state starts up.
 
         Additional keyword *options* are stored on the state so that
@@ -23,7 +27,11 @@ class State:
         self.done = False
         self.quit = False
         self.screen = screen
-        self.num_players = num_players
+        if num_players in (1, 2):
+            self.players = num_players
+        elif num_players is not None:
+            self.players = 1
+        self.num_players = self.players
         self.options = options
 
     def cleanup(self):
