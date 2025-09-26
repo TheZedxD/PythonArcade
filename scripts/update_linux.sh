@@ -1,53 +1,39 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-cd "$ROOT"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-# Stash or warn about local changes
-if ! git diff-index --quiet HEAD --; then
-  echo "Stashing local changes..."
-  git stash push --include-untracked -m "pre-update-$(date +%s)"
-  echo "Local changes stashed. Use 'git stash pop' after the update to restore them."
+# Determine repository URL and branch
+REPO_URL="${1:-$(git -C "$ROOT" config --get remote.origin.url 2>/dev/null || true)}"
+if [ -z "$REPO_URL" ]; then
+  echo "Could not determine repository URL. Pass it as the first argument." >&2
+  exit 1
 fi
 
-DEFAULT_BRANCH=$(git remote show origin 2>/dev/null | awk '/HEAD branch/ {print $NF}')
-DEFAULT_BRANCH=${DEFAULT_BRANCH:-main}
-
-echo "Pulling latest from $DEFAULT_BRANCH..."
-git pull --rebase origin "$DEFAULT_BRANCH"
-
-# Preserve user data
-timestamp=$(date +%s)
-for d in save config; do
-  if [ -d "$ROOT/$d" ]; then
-    cp -r "$ROOT/$d" "$ROOT/${d}_backup_$timestamp"
-  fi
-done
-
-# Activate virtual environment
-if [ -d "$ROOT/.venv" ]; then
-  . "$ROOT/.venv/bin/activate"
+if [ -n "${2:-}" ]; then
+  BRANCH="$2"
 else
-  echo ".venv not found. Please run scripts/install_linux.sh first." >&2
-  exit 1
+  BRANCH=$(git -C "$ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || true)
+  if [ -z "$BRANCH" ] || [ "$BRANCH" = "HEAD" ]; then
+    BRANCH=$(git -C "$ROOT" remote show origin 2>/dev/null | awk '/HEAD branch/ {print $NF}')
+  fi
+  BRANCH=${BRANCH:-main}
 fi
 
-python -m pip install -r "$ROOT/requirements.txt"
+TMP_DIR="$(mktemp -d)"
+cleanup() {
+  rm -rf "$TMP_DIR"
+}
+trap cleanup EXIT
 
-# Run migrations if available
-if [ -f "$ROOT/scripts/migrate_user_data.py" ]; then
-  python "$ROOT/scripts/migrate_user_data.py"
-fi
+echo "Downloading latest files from $REPO_URL ($BRANCH)..."
+git clone --depth 1 --branch "$BRANCH" "$REPO_URL" "$TMP_DIR/repo" >/dev/null
 
-if [ -z "$DISPLAY" ]; then
-  export SDL_VIDEODRIVER=${SDL_VIDEODRIVER:-dummy}
-  export SDL_AUDIODRIVER=${SDL_AUDIODRIVER:-dummy}
-fi
-
-if ! python -m pytest "$ROOT/tests/smoke_test.py"; then
-  echo "Smoke test failed. Please check logs." >&2
-  exit 1
-fi
+echo "Copying files into place..."
+rsync -a --delete \
+  --exclude '.git/' \
+  --exclude 'scripts/update_linux.sh' \
+  "$TMP_DIR/repo/" "$ROOT/"
 
 echo "Update complete."
