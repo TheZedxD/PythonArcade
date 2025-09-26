@@ -1,6 +1,7 @@
 import pygame
 
 from ..ui.layout import scale
+from ..utils.persistence import save_json
 from .theme import ACCENT_COLOR, PRIMARY_COLOR, draw_text
 
 
@@ -60,3 +61,32 @@ class PauseMenu:
                 color,
                 center=True,
             )
+
+
+def apply_pause_option(
+    choice: str, settings: dict, settings_path: str
+) -> bool:
+    """Apply a common pause-menu option.
+
+    Returns ``True`` if *choice* was handled.
+    """
+
+    handled = False
+    if choice == "Fullscreen":
+        pygame.display.toggle_fullscreen()
+        settings["fullscreen"] = not settings.get("fullscreen", False)
+        handled = True
+    elif choice == "Volume +":
+        new_vol = min(1.0, settings.get("sound_volume", 1.0) + 0.1)
+        settings["sound_volume"] = round(new_vol, 2)
+        pygame.mixer.music.set_volume(new_vol)
+        handled = True
+    elif choice == "Volume -":
+        new_vol = max(0.0, settings.get("sound_volume", 1.0) - 0.1)
+        settings["sound_volume"] = round(new_vol, 2)
+        pygame.mixer.music.set_volume(new_vol)
+        handled = True
+
+    if handled:
+        save_json(settings_path, settings)
+    return handled

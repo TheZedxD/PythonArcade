@@ -4,6 +4,8 @@ from datetime import datetime
 
 import pygame
 
+from ...common.theme import ACCENT_COLOR, BG_COLOR, PRIMARY_COLOR, draw_text, get_font
+from ...common.ui import PauseMenu, apply_pause_option
 from ...state import State
 from ...utils.persistence import load_json, save_json
 from ...utils.resources import save_path
@@ -26,13 +28,11 @@ class VirusState(State):
     def startup(self, screen, num_players: int = 1):
         super().startup(screen, num_players)
         # Initialize fonts (using a terminal-style font)
-        self.font = pygame.font.SysFont("Courier", 24)
-        self.big_font = pygame.font.SysFont("Courier", 32, bold=True)
-        self.rain_font = pygame.font.SysFont("Courier", 20)
+        self.rain_font = get_font(20)
         # Color scheme (Matrix green on black)
-        self.normal_color = (0, 155, 0)
-        self.highlight_color = (0, 255, 0)
-        self.bg_color = (0, 0, 0)
+        self.normal_color = ACCENT_COLOR
+        self.highlight_color = PRIMARY_COLOR
+        self.bg_color = BG_COLOR
         # Cell size and playfield positioning
         self.cell = 24
         playfield_width = GRID_WIDTH * self.cell
@@ -66,8 +66,9 @@ class VirusState(State):
             self.board2["current"] = None
         # Game state flags
         self.state = "instructions"
-        self.pause_options = ["Resume", "Volume -", "Volume +", "Fullscreen", "Quit"]
-        self.pause_index = 0
+        self.pause_menu = PauseMenu(
+            ["Resume", "Volume -", "Volume +", "Fullscreen", "Quit"], font_size=32
+        )
         # Load settings (volume, fullscreen) and apply volume
         self.settings = load_json(
             SETTINGS_PATH,
@@ -390,7 +391,7 @@ class VirusState(State):
                 if event.key == pygame.K_ESCAPE:
                     # Pause the game
                     self.state = "pause"
-                    self.pause_index = 0
+                    self.pause_menu.index = 0
                 # Player 1 controls (arrows + space)
                 if not self.board1["gameover"]:
                     if event.key == pygame.K_LEFT and not self._collides(
@@ -439,43 +440,16 @@ class VirusState(State):
                         ):
                             self.board2["current"]["y"] += 1
         elif self.state == "pause":
-            if event.type == pygame.KEYDOWN:
-                if event.key in (pygame.K_UP, pygame.K_w):
-                    # Navigate pause menu up
-                    self.pause_index = (self.pause_index - 1) % len(self.pause_options)
-                elif event.key in (pygame.K_DOWN, pygame.K_s):
-                    # Navigate pause menu down
-                    self.pause_index = (self.pause_index + 1) % len(self.pause_options)
-                elif event.key == pygame.K_RETURN:
-                    # Activate selected pause menu option
-                    choice = self.pause_options[self.pause_index]
-                    if choice == "Resume":
-                        self.state = "play"
-                    elif choice == "Quit":
-                        self.update_stats()
-                        self.done = True
-                        self.next = "menu"
-                    elif choice == "Fullscreen":
-                        pygame.display.toggle_fullscreen()
-                        self.settings["fullscreen"] = not self.settings.get(
-                            "fullscreen", False
-                        )
-                        save_json(SETTINGS_PATH, self.settings)
-                    elif choice == "Volume +":
-                        # Increase volume
-                        vol = min(1.0, self.settings.get("sound_volume", 1.0) + 0.1)
-                        self.settings["sound_volume"] = round(vol, 2)
-                        pygame.mixer.music.set_volume(vol)
-                        save_json(SETTINGS_PATH, self.settings)
-                    elif choice == "Volume -":
-                        # Decrease volume
-                        vol = max(0.0, self.settings.get("sound_volume", 1.0) - 0.1)
-                        self.settings["sound_volume"] = round(vol, 2)
-                        pygame.mixer.music.set_volume(vol)
-                        save_json(SETTINGS_PATH, self.settings)
-                elif event.key == pygame.K_ESCAPE:
-                    # Unpause
+            choice = self.pause_menu.handle_keyboard(event)
+            if choice:
+                if choice == "Resume":
                     self.state = "play"
+                elif choice == "Quit":
+                    self.update_stats()
+                    self.done = True
+                    self.next = "menu"
+                else:
+                    apply_pause_option(choice, self.settings, SETTINGS_PATH)
         elif self.state == "gameover":
             if event.type == pygame.KEYDOWN:
                 # Any key press on Game Over screen returns to menu
@@ -502,7 +476,7 @@ class VirusState(State):
                         self.board1["current"]["y"] += 1
                 elif event.button in (7, 9):  # Start/Select -> pause
                     self.state = "pause"
-                    self.pause_index = 0
+                    self.pause_menu.index = 0
             elif event.type == pygame.JOYAXISMOTION:
                 if event.axis == 0:  # left stick horizontal
                     if event.value < -0.5 and not self._collides(
@@ -535,50 +509,16 @@ class VirusState(State):
                 elif y == 1:
                     self._rotate_piece(self.board1)
         elif self.state == "pause":
-            # Navigate pause menu with gamepad (D-pad or left stick, A to select, B/Start to cancel)
-            if event.type in (pygame.JOYAXISMOTION, pygame.JOYHATMOTION):
-                if event.type == pygame.JOYHATMOTION:
-                    _, hat_y = event.value
-                    vert = -hat_y
-                else:
-                    if event.axis != 1:
-                        return
-                    vert = event.value
-                if vert < -0.5 or vert == -1:
-                    self.pause_index = (self.pause_index - 1) % len(self.pause_options)
-                elif vert > 0.5 or vert == 1:
-                    self.pause_index = (self.pause_index + 1) % len(self.pause_options)
-            elif event.type == pygame.JOYBUTTONDOWN:
-                if event.button == 0:  # A button to select
-                    choice = self.pause_options[self.pause_index]
-                    if choice == "Resume":
-                        self.state = "play"
-                    elif choice == "Quit":
-                        self.update_stats()
-                        self.done = True
-                        self.next = "menu"
-                    elif choice == "Fullscreen":
-                        pygame.display.toggle_fullscreen()
-                        self.settings["fullscreen"] = not self.settings.get(
-                            "fullscreen", False
-                        )
-                        save_json(SETTINGS_PATH, self.settings)
-                    elif choice == "Volume +":
-                        vol = min(1.0, self.settings.get("sound_volume", 1.0) + 0.1)
-                        self.settings["sound_volume"] = round(vol, 2)
-                        pygame.mixer.music.set_volume(vol)
-                        save_json(SETTINGS_PATH, self.settings)
-                    elif choice == "Volume -":
-                        vol = max(0.0, self.settings.get("sound_volume", 1.0) - 0.1)
-                        self.settings["sound_volume"] = round(vol, 2)
-                        pygame.mixer.music.set_volume(vol)
-                        save_json(SETTINGS_PATH, self.settings)
-                elif event.button in (
-                    1,
-                    7,
-                    9,
-                ):  # B or Start/Select to resume without change
+            choice = self.pause_menu.handle_gamepad(event)
+            if choice:
+                if choice == "Resume":
                     self.state = "play"
+                elif choice == "Quit":
+                    self.update_stats()
+                    self.done = True
+                    self.next = "menu"
+                else:
+                    apply_pause_option(choice, self.settings, SETTINGS_PATH)
         elif self.state == "gameover":
             if event.type == pygame.JOYBUTTONDOWN:
                 self.done = True
@@ -708,64 +648,69 @@ class VirusState(State):
                 score_label = f"P{idx+1}: {board['score']}"
             else:
                 score_label = f"Score: {board['score']}"
-            score_surf = self.font.render(score_label, True, self.highlight_color)
-            self.screen.blit(score_surf, (preview_x, preview_y + 120))
+            draw_text(self.screen, score_label, (preview_x, preview_y + 120), 24)
             if idx == 0:
                 # Player 1 side: show high score
-                hs_surf = self.font.render(
-                    f"High: {self.high_score}", True, self.highlight_color
+                draw_text(
+                    self.screen,
+                    f"High: {self.high_score}",
+                    (preview_x, preview_y + 150),
+                    24,
                 )
-                self.screen.blit(hs_surf, (preview_x, preview_y + 150))
         # Draw any floating score popups
         for popup in self.popups:
-            pop_surf = self.font.render(popup["text"], True, popup["color"])
-            self.screen.blit(pop_surf, (popup["x"], popup["y"]))
+            draw_text(
+                self.screen,
+                popup["text"],
+                (popup["x"], popup["y"]),
+                24,
+                color=popup["color"],
+            )
         # Draw overlay screens for instructions, pause, and game over states
         if self.state == "instructions":
             # Title
-            title_text = self.big_font.render("VIRUS", True, self.highlight_color)
-            title_rect = title_text.get_rect(center=(width // 2, height // 5))
-            self.screen.blit(title_text, title_rect)
+            draw_text(
+                self.screen,
+                "VIRUS",
+                (width // 2, height // 5),
+                32,
+                bold=True,
+                center=True,
+            )
             if self.board2:
                 # 2-player: prompt mode selection
-                info_text = self.font.render(
-                    "P1: Arrows   P2: WASD", True, self.highlight_color
+                draw_text(
+                    self.screen,
+                    "P1: Arrows   P2: WASD",
+                    (width // 2, height // 2),
+                    24,
+                    center=True,
                 )
-                mode_text = self.font.render(
+                draw_text(
+                    self.screen,
                     "Press 1 (Blitz), 2 (Normal), or 3 (Long)",
-                    True,
-                    self.highlight_color,
+                    (width // 2, height // 2 + 40),
+                    24,
+                    center=True,
                 )
-                rect2 = info_text.get_rect(center=(width // 2, height // 2))
-                rect3 = mode_text.get_rect(center=(width // 2, height // 2 + 40))
-                self.screen.blit(info_text, rect2)
-                self.screen.blit(mode_text, rect3)
             else:
-                info_text = self.font.render(
-                    "Press any key to start", True, self.highlight_color
+                draw_text(
+                    self.screen,
+                    "Press any key to start",
+                    (width // 2, height // 2),
+                    24,
+                    center=True,
                 )
-                rect = info_text.get_rect(center=(width // 2, height // 2))
-                self.screen.blit(info_text, rect)
         elif self.state == "pause":
             # Translucent overlay
             overlay = pygame.Surface(self.screen.get_size(), pygame.SRCALPHA)
-            overlay.fill((0, 0, 0, 200))
+            overlay.fill((*self.bg_color, 200))
+            self.pause_menu.draw(overlay)
             self.screen.blit(overlay, (0, 0))
-            # Pause menu options
-            for i, option in enumerate(self.pause_options):
-                color = (
-                    self.highlight_color if i == self.pause_index else self.normal_color
-                )
-                prefix = "> " if i == self.pause_index else "  "
-                option_surf = self.big_font.render(prefix + option, True, color)
-                opt_rect = option_surf.get_rect(
-                    center=(width // 2, height // 3 + i * 40)
-                )
-                self.screen.blit(option_surf, opt_rect)
         elif self.state == "gameover":
             # Darken screen
             overlay = pygame.Surface(self.screen.get_size(), pygame.SRCALPHA)
-            overlay.fill((0, 0, 0, 200))
+            overlay.fill((*self.bg_color, 200))
             self.screen.blit(overlay, (0, 0))
             if self.num_players == 2:
                 # Show "TIME UP" if ended by timer, otherwise "GAME OVER"
@@ -777,27 +722,50 @@ class VirusState(State):
                     result_text = "P2 WINS!"
                 else:
                     result_text = "TIE GAME!"
-                text1 = self.big_font.render(title, True, self.highlight_color)
-                text2 = self.big_font.render(result_text, True, self.highlight_color)
-                text3 = self.font.render("Press any key", True, self.highlight_color)
-                rect1 = text1.get_rect(center=(width // 2, height // 3))
-                rect2 = text2.get_rect(center=(width // 2, height // 2))
-                rect3 = text3.get_rect(center=(width // 2, height // 2 + 40))
-                self.screen.blit(text1, rect1)
-                self.screen.blit(text2, rect2)
-                self.screen.blit(text3, rect3)
+                draw_text(
+                    self.screen,
+                    title,
+                    (width // 2, height // 3),
+                    32,
+                    bold=True,
+                    center=True,
+                )
+                draw_text(
+                    self.screen,
+                    result_text,
+                    (width // 2, height // 2),
+                    32,
+                    bold=True,
+                    center=True,
+                )
+                draw_text(
+                    self.screen,
+                    "Press any key",
+                    (width // 2, height // 2 + 40),
+                    24,
+                    center=True,
+                )
             else:
                 # Single-player: either win (cleared all viruses) or game over (topped out)
                 if getattr(self, "win", False):
                     text_main = "YOU WIN!"
                 else:
                     text_main = "GAME OVER"
-                text1 = self.big_font.render(text_main, True, self.highlight_color)
-                text2 = self.font.render("Press any key", True, self.highlight_color)
-                rect1 = text1.get_rect(center=(width // 2, height // 3))
-                rect2 = text2.get_rect(center=(width // 2, height // 2))
-                self.screen.blit(text1, rect1)
-                self.screen.blit(text2, rect2)
+                draw_text(
+                    self.screen,
+                    text_main,
+                    (width // 2, height // 3),
+                    32,
+                    bold=True,
+                    center=True,
+                )
+                draw_text(
+                    self.screen,
+                    "Press any key",
+                    (width // 2, height // 2),
+                    24,
+                    center=True,
+                )
 
     def update_stats(self):
         """Update high score data and play count at end of a game session."""

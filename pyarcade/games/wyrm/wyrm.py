@@ -1,7 +1,9 @@
 import pygame
 
+from ...common.theme import ACCENT_COLOR, BG_COLOR, PRIMARY_COLOR, draw_text, get_font
+from ...common.ui import PauseMenu, apply_pause_option
 from ...state import State
-from ...utils.persistence import load_json, save_json
+from ...utils.persistence import load_json
 from ...utils.resources import asset_path, save_path
 
 SETTINGS_PATH = save_path("settings.json")
@@ -36,18 +38,12 @@ class WyrmGame(State):
         self.shot_sound: pygame.mixer.Sound | None = None
         self.grid_w = 0
         self.grid_h = 0
-        self.font: pygame.font.Font | None = None
-        self.big_font: pygame.font.Font | None = None
         self.overlay: pygame.Surface | None = None
         self.state = "play"
-        self.pause_options = [
-            "Resume",
-            "Volume -",
-            "Volume +",
-            "Fullscreen",
-            "Quit",
-        ]
-        self.pause_index = 0
+        self.pause_menu = PauseMenu(
+            ["Resume", "Volume -", "Volume +", "Fullscreen", "Quit"],
+            font_size=32,
+        )
         self.settings: dict = {}
 
     def startup(self, screen: pygame.Surface, num_players: int = 1) -> None:
@@ -65,8 +61,6 @@ class WyrmGame(State):
         self.lives1 = 3
         self.lives2 = 3
         self.move_delay = MOVE_DELAY
-        self.font = pygame.font.SysFont("Courier", 20)
-        self.big_font = pygame.font.SysFont("Courier", 32)
         try:
             self.segment_img = pygame.image.load(
                 asset_path("games", "wyrm", "assets", "segment.png")
@@ -91,46 +85,25 @@ class WyrmGame(State):
         pygame.mixer.music.set_volume(self.settings.get("sound_volume", 1.0))
         self.overlay = pygame.Surface(self.screen.get_size(), pygame.SRCALPHA)
         self.state = "play"
-        self.pause_index = 0
+        self.pause_menu.index = 0
 
     def handle_keyboard(self, event: pygame.event.Event) -> None:
         if self.state == "pause":
-            if event.type == pygame.KEYDOWN:
-                if event.key in (pygame.K_UP, pygame.K_w):
-                    self.pause_index = (self.pause_index - 1) % len(self.pause_options)
-                elif event.key in (pygame.K_DOWN, pygame.K_s):
-                    self.pause_index = (self.pause_index + 1) % len(self.pause_options)
-                elif event.key == pygame.K_RETURN:
-                    choice = self.pause_options[self.pause_index]
-                    if choice == "Resume":
-                        self.state = "play"
-                    elif choice == "Quit":
-                        self.done = True
-                        self.next = "menu"
-                    elif choice == "Fullscreen":
-                        pygame.display.toggle_fullscreen()
-                        self.settings["fullscreen"] = not self.settings.get(
-                            "fullscreen", False
-                        )
-                        save_json(SETTINGS_PATH, self.settings)
-                    elif choice == "Volume +":
-                        vol = min(1.0, self.settings.get("sound_volume", 1.0) + 0.1)
-                        self.settings["sound_volume"] = round(vol, 2)
-                        pygame.mixer.music.set_volume(vol)
-                        save_json(SETTINGS_PATH, self.settings)
-                    elif choice == "Volume -":
-                        vol = max(0.0, self.settings.get("sound_volume", 1.0) - 0.1)
-                        self.settings["sound_volume"] = round(vol, 2)
-                        pygame.mixer.music.set_volume(vol)
-                        save_json(SETTINGS_PATH, self.settings)
-                elif event.key == pygame.K_ESCAPE:
+            choice = self.pause_menu.handle_keyboard(event)
+            if choice:
+                if choice == "Resume":
                     self.state = "play"
+                elif choice == "Quit":
+                    self.done = True
+                    self.next = "menu"
+                else:
+                    apply_pause_option(choice, self.settings, SETTINGS_PATH)
             return
 
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
                 self.state = "pause"
-                self.pause_index = 0
+                self.pause_menu.index = 0
                 return
 
             # Player 1 controls (arrows + space)
@@ -166,50 +139,21 @@ class WyrmGame(State):
 
     def handle_gamepad(self, event: pygame.event.Event) -> None:
         if self.state == "pause":
-            if event.type in (pygame.JOYAXISMOTION, pygame.JOYHATMOTION):
-                if event.type == pygame.JOYHATMOTION:
-                    _, y = event.value
-                    vert = -y
-                else:
-                    if event.axis != 1:
-                        return
-                    vert = event.value
-                if vert < -0.5 or vert == -1:
-                    self.pause_index = (self.pause_index - 1) % len(self.pause_options)
-                elif vert > 0.5 or vert == 1:
-                    self.pause_index = (self.pause_index + 1) % len(self.pause_options)
-            elif event.type == pygame.JOYBUTTONDOWN:
-                if event.button == 0:
-                    choice = self.pause_options[self.pause_index]
-                    if choice == "Resume":
-                        self.state = "play"
-                    elif choice == "Quit":
-                        self.done = True
-                        self.next = "menu"
-                    elif choice == "Fullscreen":
-                        pygame.display.toggle_fullscreen()
-                        self.settings["fullscreen"] = not self.settings.get(
-                            "fullscreen", False
-                        )
-                        save_json(SETTINGS_PATH, self.settings)
-                    elif choice == "Volume +":
-                        vol = min(1.0, self.settings.get("sound_volume", 1.0) + 0.1)
-                        self.settings["sound_volume"] = round(vol, 2)
-                        pygame.mixer.music.set_volume(vol)
-                        save_json(SETTINGS_PATH, self.settings)
-                    elif choice == "Volume -":
-                        vol = max(0.0, self.settings.get("sound_volume", 1.0) - 0.1)
-                        self.settings["sound_volume"] = round(vol, 2)
-                        pygame.mixer.music.set_volume(vol)
-                        save_json(SETTINGS_PATH, self.settings)
-                elif event.button in (1, 7, 9):
+            choice = self.pause_menu.handle_gamepad(event)
+            if choice:
+                if choice == "Resume":
                     self.state = "play"
+                elif choice == "Quit":
+                    self.done = True
+                    self.next = "menu"
+                else:
+                    apply_pause_option(choice, self.settings, SETTINGS_PATH)
             return
 
         if event.type == pygame.JOYBUTTONDOWN:
             if event.button == 7:
                 self.state = "pause"
-                self.pause_index = 0
+                self.pause_menu.index = 0
             elif event.button == 0:
                 self.bullets.append([self.player1[0], self.player1[1] - 1, 1])
                 if self.shot_sound:
@@ -333,36 +277,36 @@ class WyrmGame(State):
         self.move_delay = max(0.05, MOVE_DELAY * (0.9**level))
 
     def draw(self) -> None:
-        self.screen.fill((0, 0, 0))
+        self.screen.fill(BG_COLOR)
         for chain in self.wyrms:
             for x, y in chain:
                 rect = pygame.Rect(x * GRID_SIZE, y * GRID_SIZE, GRID_SIZE, GRID_SIZE)
                 if self.segment_img:
                     self.screen.blit(self.segment_img, rect)
                 else:
-                    pygame.draw.rect(self.screen, (0, 255, 0), rect)
+                    pygame.draw.rect(self.screen, PRIMARY_COLOR, rect)
         for x, y in self.blocks:
             pygame.draw.rect(
                 self.screen,
-                (155, 0, 155),
+                ACCENT_COLOR,
                 (x * GRID_SIZE, y * GRID_SIZE, GRID_SIZE, GRID_SIZE),
             )
         if self.lives1 > 0:
             px, py = self.player1
             pygame.draw.rect(
                 self.screen,
-                (0, 255, 0),
+                PRIMARY_COLOR,
                 (px * GRID_SIZE, py * GRID_SIZE, GRID_SIZE, GRID_SIZE),
             )
         if self.num_players > 1 and self.lives2 > 0:
             px, py = self.player2
             pygame.draw.rect(
                 self.screen,
-                (0, 128, 255),
+                ACCENT_COLOR,
                 (px * GRID_SIZE, py * GRID_SIZE, GRID_SIZE, GRID_SIZE),
             )
         for x, y, shooter in self.bullets:
-            color = (0, 255, 0) if shooter == 1 else (0, 128, 255)
+            color = PRIMARY_COLOR if shooter == 1 else ACCENT_COLOR
             pygame.draw.rect(
                 self.screen,
                 color,
@@ -373,33 +317,28 @@ class WyrmGame(State):
                     GRID_SIZE // 2,
                 ),
             )
-        if self.font:
-            text = self.font.render(
-                f"P1: {self.score1} L{self.lives1}", True, (0, 255, 0)
+
+        font = get_font(20)
+        draw_text(
+            self.screen,
+            f"P1: {self.score1} L{self.lives1}",
+            (5, 5),
+            20,
+        )
+        if self.num_players > 1:
+            label = f"P2: {self.score2} L{self.lives2}"
+            width = font.size(label)[0]
+            draw_text(
+                self.screen,
+                label,
+                (self.screen.get_width() - width - 5, 5),
+                20,
             )
-            self.screen.blit(text, (5, 5))
-            if self.num_players > 1:
-                text2 = self.font.render(
-                    f"P2: {self.score2} L{self.lives2}", True, (0, 255, 0)
-                )
-                self.screen.blit(
-                    text2,
-                    (self.screen.get_width() - text2.get_width() - 5, 5),
-                )
-        if self.state == "pause" and self.overlay and self.big_font:
-            self.overlay.fill((0, 0, 0, 200))
+
+        if self.state == "pause" and self.overlay:
+            self.overlay.fill((*BG_COLOR, 200))
+            self.pause_menu.draw(self.overlay)
             self.screen.blit(self.overlay, (0, 0))
-            for i, option in enumerate(self.pause_options):
-                color = (0, 255, 0) if i == self.pause_index else (0, 155, 0)
-                prefix = "> " if i == self.pause_index else "  "
-                text = self.big_font.render(prefix + option, True, color)
-                rect = text.get_rect(
-                    center=(
-                        self.screen.get_width() // 2,
-                        self.screen.get_height() // 2 + i * 40,
-                    )
-                )
-                self.screen.blit(text, rect)
 
     def game_over(self, name: str) -> None:
         from high_scores import save_score
