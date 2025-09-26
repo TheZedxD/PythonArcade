@@ -4,7 +4,7 @@ A collection of simple Pygame-based games packaged under an arcade shell.
 
 ## Quick Start
 
-1. Clone this repository.
+1. Download the repository (either clone it over HTTPS or grab the ZIP archive from GitHub and unzip it locally).
 2. Install dependencies and create the virtual environment:
 
    ```sh
