@@ -9,6 +9,9 @@ import pygame
 if __package__ in (None, ""):
     # Allow running this module directly, e.g. ``python pyarcade/main.py``
     sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
+    from common.player_select import PlayerSelectOverlay
+else:
+    from .common.player_select import PlayerSelectOverlay
 
 from pyarcade.arcade_menu import MainMenuState
 from pyarcade.settings_state import SettingsState
@@ -27,7 +30,7 @@ DEFAULT_SETTINGS = {
 
 
 def load_games():
-    """Import game states from the games package."""
+    """Import game state classes from the games package."""
     games = {}
     base_dir = os.path.join(os.path.dirname(__file__), "games")
     if not os.path.isdir(base_dir):
@@ -46,7 +49,7 @@ def load_games():
                         and issubclass(obj, State)
                         and obj is not State
                     ):
-                        games[name] = obj()
+                        games[name] = obj
                         logging.info("Loaded game: %s", name)
                         break
             except Exception:
@@ -85,14 +88,17 @@ def main():
     pygame.mixer.music.set_volume(settings.get("sound_volume", 1.0))
     clock = pygame.time.Clock()
 
-    states = load_games()
+    game_classes = load_games()
+    states: dict[str, State] = {}
     menu = MainMenuState()
     settings_state = SettingsState()
     states["menu"] = menu
     states["Settings"] = settings_state
 
-    current_state = states["menu"]
+    current_state_name = "menu"
+    current_state = menu
     current_state.startup(screen)
+    players_selected: int | None = None
 
     running = True
     while running:
@@ -142,8 +148,11 @@ def main():
         if current_state.quit:
             running = False
         elif current_state.done:
-            next_state = states.get(current_state.next)
+            next_name = current_state.next
+            previous_state_name = current_state_name
             current_state.cleanup()
+            if previous_state_name not in ("menu", "Settings"):
+                states.pop(previous_state_name, None)
             if isinstance(current_state, SettingsState):
                 settings = load_json(SETTINGS_PATH, DEFAULT_SETTINGS)
                 pygame.mixer.music.set_volume(settings.get("sound_volume", 1.0))
@@ -157,18 +166,42 @@ def main():
                 layout_init(screen.get_size())
                 for state in states.values():
                     state.screen = screen
+
+            next_state: State | None = None
+            num_players = getattr(current_state, "num_players", 1)
+            if next_name:
+                if next_name == "menu":
+                    players_selected = None
+                    next_state = states["menu"]
+                    num_players = 1
+                elif next_name == "Settings":
+                    next_state = states["Settings"]
+                elif next_name in game_classes:
+                    if isinstance(current_state, MainMenuState):
+                        selector = PlayerSelectOverlay()
+                        players_selected = selector.run(screen)
+                        current_state.num_players = players_selected
+                    elif players_selected is None:
+                        players_selected = getattr(current_state, "num_players", 1)
+                    GameStateClass = game_classes[next_name]
+                    next_state = GameStateClass(players=players_selected)
+                    states[next_name] = next_state
+                    num_players = players_selected
+                else:
+                    next_state = states.get(next_name)
+
             if next_state:
-                # pass through any options the current state collected
                 opts = getattr(current_state, "game_options", {})
                 logging.info(
                     "Transitioning to state '%s' (players=%s, options=%s)",
-                    current_state.next,
-                    getattr(current_state, "num_players", 1),
+                    next_name,
+                    num_players,
                     opts,
                 )
-                next_state.startup(screen, current_state.num_players, **opts)
+                next_state.startup(screen, num_players, **opts)
                 current_state = next_state
-                if had_error and current_state is menu:
+                current_state_name = next_name
+                if had_error and next_name == "menu":
                     logging.info("Returned to main menu after error")
 
     pygame.quit()

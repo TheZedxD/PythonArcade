@@ -4,12 +4,12 @@ import pygame
 class State:
     """Base class for game states."""
 
-    def __init__(self):
+    def __init__(self, players: int = 1):
         self.done = False
         self.quit = False
         self.next = None
         self.screen = None
-        self.num_players = 1
+        self.num_players = players
         # arbitrary options passed when the state starts
         self.options = {}
 

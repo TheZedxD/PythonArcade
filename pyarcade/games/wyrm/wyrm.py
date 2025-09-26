@@ -16,8 +16,8 @@ MOVE_DELAY = 0.2
 class WyrmGame(State):
     """Minimal Centipede-style game."""
 
-    def __init__(self) -> None:
-        super().__init__()
+    def __init__(self, players: int = 1) -> None:
+        super().__init__(players=players)
         self.score1 = 0
         self.score2 = 0
         self.lives1 = 3
