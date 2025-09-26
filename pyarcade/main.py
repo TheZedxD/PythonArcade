@@ -1,15 +1,21 @@
 import importlib
 import logging
 import os
+import pathlib
+import sys
 
 import pygame
 
-from .arcade_menu import MainMenuState
-from .settings_state import SettingsState
-from .state import State
-from .ui.layout import init as layout_init
-from .utils.persistence import load_json, save_json
-from .utils.resources import save_path
+if __package__ in (None, ""):
+    # Allow running this module directly, e.g. ``python pyarcade/main.py``
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
+
+from pyarcade.arcade_menu import MainMenuState
+from pyarcade.settings_state import SettingsState
+from pyarcade.state import State
+from pyarcade.ui.layout import init as layout_init
+from pyarcade.utils.persistence import load_json, save_json
+from pyarcade.utils.resources import save_path
 
 SETTINGS_PATH = save_path("settings.json")
 DEFAULT_SETTINGS = {

@@ -1,50 +1,53 @@
 @echo off
 setlocal
-set ROOT=%~dp0..
+
+set "ROOT=%~dp0.."
 cd /d "%ROOT%"
 
-for /f "delims=" %%i in ('git status --porcelain') do set DIRTY=1
-if defined DIRTY (
-  echo Stashing local changes...
-  git stash push --include-untracked -m "pre-update-%DATE%_%TIME%"
-  echo Local changes stashed. Run "git stash pop" after the update to restore them.
+set "REPO_URL=%~1"
+if "%REPO_URL%"=="" (
+  for /f "delims=" %%i in ('git config --get remote.origin.url 2^>nul') do set "REPO_URL=%%i"
+)
+if "%REPO_URL%"=="" (
+  echo Could not determine repository URL. Pass it as the first argument.
+  exit /b 1
 )
 
-for /f "tokens=3" %%i in ('git remote show origin ^| findstr /c:"HEAD branch"') do set DEFAULT_BRANCH=%%i
-if "%DEFAULT_BRANCH%"=="" set DEFAULT_BRANCH=main
-
-echo Pulling latest from %DEFAULT_BRANCH%...
-git pull --rebase origin %DEFAULT_BRANCH%
-
-set TIMESTAMP=%RANDOM%
-for %%d in (save config) do (
-  if exist "%ROOT%\%%d" (
-    xcopy "%ROOT%\%%d" "%ROOT%\%%d_backup_%TIMESTAMP%" /E /I /Y >nul
+set "BRANCH=%~2"
+if "%BRANCH%"=="" (
+  for /f "delims=" %%i in ('git rev-parse --abbrev-ref HEAD 2^>nul') do set "BRANCH=%%i"
+  if "%BRANCH%"=="" (
+    for /f "tokens=3" %%i in ('git remote show origin ^| findstr /c:"HEAD branch"') do set "BRANCH=%%i"
   )
+  if "%BRANCH%"=="" set "BRANCH=main"
 )
 
-if not exist "%ROOT%\.venv" (
-  echo .venv not found. Please run scripts\install_windows.bat first.
+set "TMP_DIR=%TEMP%\pyarcade_update_%RANDOM%_%RANDOM%"
+md "%TMP_DIR%" >nul 2>&1 || (
+  echo Failed to create temporary directory.
   exit /b 1
 )
 
-call "%ROOT%\.venv\Scripts\activate"
+set "EXIT_CODE=0"
 
-python -m pip install -r "%ROOT%\requirements.txt"
-
-if exist "%ROOT%\scripts\migrate_user_data.py" (
-  python "%ROOT%\scripts\migrate_user_data.py"
-)
-
-if not defined DISPLAY (
-  set SDL_VIDEODRIVER=dummy
-  set SDL_AUDIODRIVER=dummy
-)
-
-python -m pytest "%ROOT%\tests\smoke_test.py"
+echo Downloading latest files from %REPO_URL% (%BRANCH%)...
+git clone --depth 1 --branch %BRANCH% "%REPO_URL%" "%TMP_DIR%\repo" >nul
 if errorlevel 1 (
-  echo Smoke test failed. Please check logs.
-  exit /b 1
+  set "EXIT_CODE=%ERRORLEVEL%"
+  goto cleanup
+)
+
+echo Copying files into place...
+robocopy "%TMP_DIR%\repo" "%ROOT%" /MIR /XD .git /XF update_windows.bat /XF update_linux.sh >nul
+set "ROBOCODE=%ERRORLEVEL%"
+if %ROBOCODE% GEQ 8 (
+  set "EXIT_CODE=%ROBOCODE%"
+  goto cleanup
 )
 
 echo Update complete.
+goto cleanup
+
+:cleanup
+if exist "%TMP_DIR%" rmdir /s /q "%TMP_DIR%" >nul 2>&1
+exit /b %EXIT_CODE%
