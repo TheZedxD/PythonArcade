@@ -153,39 +153,13 @@ class MainMenuState(State):
                     else:
                         self.selected_game = choice
                         logging.info("Selected game '%s' from main menu", choice)
-                        if choice == "bomberman":
+                        if choice == "kart8":
+                            self.game_options = {}
+                            self.phase = "items"
+                        else:
                             self.game_options = {}
                             self.next = choice
                             self.done = True
-                            logging.info(
-                                "Starting '%s' with %s player(s)",
-                                choice,
-                                self.num_players,
-                            )
-                        else:
-                            self.phase = "players"
-        elif self.phase == "players":
-            if event.type == pygame.KEYDOWN:
-                if event.key in (pygame.K_1, pygame.K_KP1):
-                    self.num_players = 1
-                elif event.key in (pygame.K_2, pygame.K_KP2):
-                    self.num_players = 2
-                elif event.key == pygame.K_ESCAPE:
-                    self.phase = "game"
-                    return
-                else:
-                    return
-                if self.selected_game == "kart8":
-                    self.phase = "items"
-                else:
-                    self.game_options = {}
-                    self.next = self.selected_game
-                    self.done = True
-                    logging.info(
-                        "Starting '%s' with %s player(s)",
-                        self.selected_game,
-                        self.num_players,
-                    )
         elif self.phase == "items":
             if event.type == pygame.KEYDOWN:
                 if event.key in (pygame.K_y, pygame.K_1, pygame.K_KP1):
@@ -193,9 +167,8 @@ class MainMenuState(State):
                     self.next = self.selected_game
                     self.done = True
                     logging.info(
-                        "Starting '%s' with %s player(s) (items=%s)",
+                        "Starting '%s' with items=%s",
                         self.selected_game,
-                        self.num_players,
                         True,
                     )
                 elif event.key in (pygame.K_n, pygame.K_2, pygame.K_KP2):
@@ -203,13 +176,12 @@ class MainMenuState(State):
                     self.next = self.selected_game
                     self.done = True
                     logging.info(
-                        "Starting '%s' with %s player(s) (items=%s)",
+                        "Starting '%s' with items=%s",
                         self.selected_game,
-                        self.num_players,
                         False,
                     )
                 elif event.key == pygame.K_ESCAPE:
-                    self.phase = "players"
+                    self.phase = "game"
 
     def handle_gamepad(self, event):
         if self.phase == "game":
@@ -227,17 +199,13 @@ class MainMenuState(State):
                         logging.info(
                             "Selected game '%s' from main menu (gamepad)", choice
                         )
-                        if choice == "bomberman":
+                        if choice == "kart8":
+                            self.game_options = {}
+                            self.phase = "items"
+                        else:
                             self.game_options = {}
                             self.next = choice
                             self.done = True
-                            logging.info(
-                                "Starting '%s' with %s player(s) (gamepad)",
-                                choice,
-                                self.num_players,
-                            )
-                        else:
-                            self.phase = "players"
                 elif event.button in (1, 9):
                     self.quit = True
             elif event.type in (pygame.JOYAXISMOTION, pygame.JOYHATMOTION):
@@ -252,28 +220,6 @@ class MainMenuState(State):
                     self.index = (self.index - 1) % len(self.options)
                 elif vert < -0.5 or vert == -1:
                     self.index = (self.index + 1) % len(self.options)
-        elif self.phase == "players":
-            if event.type == pygame.JOYBUTTONDOWN:
-                if event.button == 0:
-                    self.num_players = 1
-                elif event.button == 1:
-                    self.num_players = 2
-                elif event.button in (7, 9):
-                    self.phase = "game"
-                    return
-                else:
-                    return
-                if self.selected_game == "kart8":
-                    self.phase = "items"
-                else:
-                    self.game_options = {}
-                    self.next = self.selected_game
-                    self.done = True
-                    logging.info(
-                        "Starting '%s' with %s player(s) (gamepad)",
-                        self.selected_game,
-                        self.num_players,
-                    )
         elif self.phase == "items":
             if event.type == pygame.JOYBUTTONDOWN:
                 if event.button == 0:
@@ -281,9 +227,8 @@ class MainMenuState(State):
                     self.next = self.selected_game
                     self.done = True
                     logging.info(
-                        "Starting '%s' with %s player(s) (items=%s, gamepad)",
+                        "Starting '%s' with items=%s (gamepad)",
                         self.selected_game,
-                        self.num_players,
                         True,
                     )
                 elif event.button == 1:
@@ -291,13 +236,12 @@ class MainMenuState(State):
                     self.next = self.selected_game
                     self.done = True
                     logging.info(
-                        "Starting '%s' with %s player(s) (items=%s, gamepad)",
+                        "Starting '%s' with items=%s (gamepad)",
                         self.selected_game,
-                        self.num_players,
                         False,
                     )
                 elif event.button in (7, 9):
-                    self.phase = "players"
+                    self.phase = "game"
 
     def update(self, dt):
         width, height = self.screen.get_size()
@@ -325,7 +269,9 @@ class MainMenuState(State):
         title.fill((0, glow, 0), special_flags=pygame.BLEND_RGB_ADD)
         self.menu_surface.blit(title, self.title_rect)
 
-        if self.phase == "game":
+        if self.phase == "items":
+            self.menu_surface.blit(self.prompt_items, self.prompt_rect)
+        else:
             for i, rect in enumerate(self.option_positions):
                 surf = (
                     self.option_surfaces[i][1]
@@ -333,10 +279,6 @@ class MainMenuState(State):
                     else self.option_surfaces[i][0]
                 )
                 self.menu_surface.blit(surf, rect)
-        elif self.phase == "players":
-            self.menu_surface.blit(self.prompt_players, self.prompt_rect)
-        else:
-            self.menu_surface.blit(self.prompt_items, self.prompt_rect)
 
         self.screen.blit(self.menu_surface, (0, 0))
         self.screen.blit(self.scanlines, (0, 0))
