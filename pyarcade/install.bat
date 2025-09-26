@@ -6,12 +6,12 @@ if errorlevel 1 (
   exit /b 1
 )
 
-python -m venv venv
-call venv\Scripts\activate.bat
+python -m venv ..\.venv
+call ..\.venv\Scripts\activate.bat
 python -m pip install --upgrade pip
 pip install -r requirements.txt
 (
   echo @echo off
-  echo call %%~dp0venv\Scripts\activate.bat
+  echo call %%~dp0..\.venv\Scripts\activate.bat
   echo python %%~dp0main.py
 ) > run.bat

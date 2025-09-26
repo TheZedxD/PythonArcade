@@ -19,8 +19,8 @@ elif command -v brew >/dev/null 2>&1; then
     brew install python@3 sdl2 sdl2_image sdl2_mixer sdl2_ttf
 fi
 
-python3 -m venv venv
-. venv/bin/activate
+python3 -m venv ../.venv
+. ../.venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
 
@@ -30,7 +30,7 @@ if [ -z "$DISPLAY" ]; then
     echo "A graphical display is required to run the arcade."
     exit 1
 fi
-. "$(dirname "$0")/venv/bin/activate"
+. "$(dirname "$0")/../.venv/bin/activate"
 python "$(dirname "$0")/main.py"
 EOF
 chmod +x run.sh
